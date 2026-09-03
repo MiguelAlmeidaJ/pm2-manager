@@ -1,170 +1,24 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="robots" content="noindex,nofollow" />
-  <title>PM2 Manager</title>
-  <link rel="stylesheet" href="/style.css" />
-  <link rel="stylesheet" href="/auth.css" />
-  <link rel="stylesheet" href="/admin.css" />
-</head>
-<body>
-  <div class="layout">
-    <aside class="sidebar">
-      <div class="brand">
-        <div class="brand-icon">P2</div>
-        <div><strong>PM2 Manager</strong><span>Server Console</span></div>
-      </div>
-
-      <nav>
-        <a class="nav-item active" href="#processes">Processos</a>
-        <a class="nav-item" href="#backups">Backups</a>
-        <a id="users-nav" class="nav-item hidden" href="#users">Usuários</a>
-        <a id="audit-nav" class="nav-item hidden" href="#audit">Auditoria</a>
-      </nav>
-
-      <div class="sidebar-bottom">
-        <div class="session-card">
-          <span class="session-label">Conectado como</span>
-          <strong id="current-user">Carregando...</strong>
-          <span id="current-role" class="role-pill">...</span>
-          <button id="logout-btn" class="session-logout" type="button">Sair</button>
-        </div>
-        <div class="sidebar-footer"><span class="dot"></span><span id="server-status">Conectando...</span></div>
-      </div>
-    </aside>
-
-    <main>
-      <header class="topbar" id="processes">
-        <div><h1>Processos</h1><p>Gerencie seus projetos PM2 e mantenha o estado do servidor protegido.</p></div>
-        <div class="header-actions">
-          <button id="refresh-btn" class="btn ghost">Atualizar</button>
-          <button id="save-btn" class="btn primary">PM2 Save</button>
-        </div>
-      </header>
-
-      <section id="save-alert" class="save-alert hidden">
-        <div><strong>Existem alterações ainda não salvas.</strong><span>O estado atual dos processos é diferente do último PM2 Save.</span></div>
-        <button id="save-alert-btn" class="btn primary">Salvar agora</button>
-      </section>
-
-      <section class="stats">
-        <article><span>Total</span><strong id="stat-total">0</strong></article>
-        <article><span>Online</span><strong id="stat-online">0</strong></article>
-        <article><span>Parados</span><strong id="stat-stopped">0</strong></article>
-        <article><span>Memória total</span><strong id="stat-memory">0 MB</strong></article>
-      </section>
-
-      <section class="save-status card compact-card">
-        <div><span class="eyebrow">Estado salvo</span><strong id="last-save">Nenhum PM2 Save detectado</strong><small id="save-detail">Aguardando informações...</small></div>
-        <div class="save-status-right"><span id="backup-count" class="metric">0 backups</span></div>
-      </section>
-
-      <section class="toolbar">
-        <div class="search-box"><input id="search" type="search" placeholder="Buscar por nome, namespace ou caminho..." /></div>
-        <select id="status-filter">
-          <option value="all">Todos os status</option><option value="online">Online</option><option value="stopped">Parados</option><option value="errored">Com erro</option>
-        </select>
-        <select id="namespace-filter"><option value="all">Todos os namespaces</option></select>
-      </section>
-
-      <section class="card">
-        <div class="table-wrap">
-          <table>
-            <thead><tr><th>Projeto</th><th>Status</th><th>CPU</th><th>RAM</th><th>Restarts</th><th>Uptime</th><th></th></tr></thead>
-            <tbody id="process-list"></tbody>
-          </table>
-        </div>
-        <div id="empty-state" class="empty hidden">Nenhum processo encontrado.</div>
-      </section>
-
-      <section id="backups" class="section-heading">
-        <div><span class="eyebrow">Segurança</span><h2>Backups do PM2</h2><p>Antes de cada PM2 Save, o dump anterior é preservado automaticamente.</p></div>
-        <button id="backup-btn" class="btn ghost">Criar backup agora</button>
-      </section>
-
-      <section class="card backup-card">
-        <div class="backup-note">
-          <strong>Restauração protegida</strong>
-          <span>Downloads e restauração de dumps são restritos ao administrador. Operadores podem criar backups e salvar o estado; viewers apenas consultam.</span>
-        </div>
-        <div class="table-wrap">
-          <table>
-            <thead><tr><th>Backup</th><th>Data</th><th>Processos</th><th>Tamanho</th><th></th></tr></thead>
-            <tbody id="backup-list"></tbody>
-          </table>
-        </div>
-        <div id="backup-empty" class="empty hidden">Nenhum backup criado ainda.</div>
-      </section>
-
-      <div id="users-area" class="hidden">
-        <section id="users" class="section-heading">
-          <div><span class="eyebrow">Acesso</span><h2>Usuários</h2><p>Controle quem pode apenas visualizar, operar processos ou administrar o servidor.</p></div>
-          <button id="new-user-btn" class="btn primary">Novo usuário</button>
-        </section>
-        <section class="card">
-          <div class="permission-guide">
-            <div><strong>Viewer</strong><span>Consulta processos, logs e backups.</span></div>
-            <div><strong>Operator</strong><span>Também inicia, para, reinicia, salva e cria backups.</span></div>
-            <div><strong>Admin</strong><span>Acesso completo, usuários, delete, restore e auditoria.</span></div>
-          </div>
-          <div class="table-wrap">
-            <table>
-              <thead><tr><th>Usuário</th><th>Perfil</th><th>Status</th><th>Criado em</th><th></th></tr></thead>
-              <tbody id="user-list"></tbody>
-            </table>
-          </div>
-        </section>
-      </div>
-
-      <div id="audit-area" class="hidden">
-        <section id="audit" class="section-heading">
-          <div><span class="eyebrow">Rastreabilidade</span><h2>Auditoria</h2><p>Últimas ações administrativas e acessos registrados pelo PM2 Manager.</p></div>
-          <button id="audit-refresh-btn" class="btn ghost">Atualizar auditoria</button>
-        </section>
-        <section class="card">
-          <div class="audit-summary"><span id="audit-count" class="metric">0 eventos</span><small>Senhas, cookies e tokens nunca são gravados no log.</small></div>
-          <div class="table-wrap">
-            <table>
-              <thead><tr><th>Data</th><th>Usuário</th><th>Ação</th><th>Alvo</th><th>Resultado</th><th>IP</th></tr></thead>
-              <tbody id="audit-list"></tbody>
-            </table>
-          </div>
-          <div id="audit-empty" class="empty hidden">Nenhum evento de auditoria registrado ainda.</div>
-        </section>
-      </div>
-    </main>
-  </div>
-
-  <div id="modal" class="modal hidden">
-    <div class="modal-card">
-      <div class="modal-header"><div><h2 id="modal-title">Logs</h2><p id="modal-subtitle"></p></div><button id="modal-close" class="icon-btn">×</button></div>
-      <div class="tabs"><button class="tab active" data-tab="out">Output</button><button class="tab" data-tab="error">Error</button></div>
-      <pre id="log-content">Carregando...</pre>
-    </div>
-  </div>
-
-  <div id="restore-modal" class="modal hidden">
-    <div class="confirm-card">
-      <div class="modal-header"><div><h2>Backup preparado</h2><p>O dump.pm2 foi substituído com segurança.</p></div><button id="restore-close" class="icon-btn">×</button></div>
-      <div class="confirm-body"><p>Para aplicar completamente esse estado no servidor, execute:</p><code id="restore-command">pm2 kill && pm2 resurrect</code><p class="warning-text">Esse comando reinicia o daemon PM2 e os processos salvos. Faça isso em uma sessão SSH ativa.</p></div>
-    </div>
-  </div>
-
-  <div id="user-modal" class="modal hidden">
-    <div class="confirm-card user-dialog">
-      <div class="modal-header"><div><h2>Novo usuário</h2><p>Crie um acesso individual para manter a auditoria identificável.</p></div><button id="user-modal-close" class="icon-btn">×</button></div>
-      <form id="user-form" class="dialog-form">
-        <label><span>Usuário</span><input id="new-username" type="text" minlength="3" maxlength="64" autocomplete="off" required placeholder="ex: miguel" /></label>
-        <label><span>Perfil</span><select id="new-user-role"><option value="viewer">Viewer · somente consulta</option><option value="operator">Operator · operação do PM2</option><option value="admin">Admin · acesso completo</option></select></label>
-        <label><span>Senha temporária</span><input id="new-user-password" type="password" minlength="12" autocomplete="new-password" required placeholder="mínimo de 12 caracteres" /></label>
-        <div class="dialog-actions"><button id="user-cancel-btn" class="btn ghost" type="button">Cancelar</button><button id="user-create-btn" class="btn primary" type="submit">Criar usuário</button></div>
-      </form>
-    </div>
-  </div>
-
-  <div id="toast" class="toast hidden"></div>
-  <script src="/app.js"></script>
-</body>
-</html>
+<html lang="pt-BR"><head>
+<meta charset="UTF-8" /><meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="robots" content="noindex,nofollow" />
+<title>Processos · PM2 Manager</title>
+<link rel="stylesheet" href="/style.css" /><link rel="stylesheet" href="/auth.css" /><link rel="stylesheet" href="/pages.css" />
+</head><body><div class="layout">
+<aside class="sidebar">
+<div class="brand"><div class="brand-icon">P2</div><div><strong>PM2 Manager</strong><span>Server Console</span></div></div>
+<nav><a class="nav-item active" href="/">Processos</a>
+<a class="nav-item" href="/backups.html">Backups</a>
+<a class="nav-item" href="/users.html" data-permission="users">Usuários</a>
+<a class="nav-item" href="/audit.html" data-permission="audit">Auditoria</a></nav>
+<div class="sidebar-bottom"><div class="session-card"><span class="session-label">Conectado como</span><strong data-current-user>Carregando...</strong><div class="page-role" data-current-role></div><button class="session-logout" data-logout type="button">Sair</button></div>
+<div class="sidebar-footer"><span class="dot"></span><span id="server-status">Conectando...</span></div></div>
+</aside><main><div class="mobile-nav"><a class="active" href="/">Processos</a>
+<a href="/backups.html">Backups</a><a href="/users.html" data-permission="users">Usuários</a><a href="/audit.html" data-permission="audit">Auditoria</a></div>
+<header class="topbar"><div><h1>Processos</h1><p class="page-subtitle">Acompanhe e opere seus projetos PM2 sem misturar administração, backups e auditoria.</p></div><div class="header-actions"><button id="refresh-btn" class="btn ghost">Atualizar</button><button id="save-btn" class="btn primary" data-permission="save">PM2 Save</button></div></header>
+<section id="save-alert" class="save-alert hidden"><div><strong>Existem alterações ainda não salvas.</strong><span>O estado atual é diferente do último PM2 Save.</span></div><button id="save-alert-btn" class="btn primary" data-permission="save">Salvar agora</button></section>
+<section class="stats"><article><span>Total</span><strong id="stat-total">0</strong></article><article><span>Online</span><strong id="stat-online">0</strong></article><article><span>Parados</span><strong id="stat-stopped">0</strong></article><article><span>Memória total</span><strong id="stat-memory">0 MB</strong></article></section>
+<section class="save-status card compact-card"><div><span class="eyebrow">Estado salvo</span><strong id="last-save">Carregando...</strong><small id="save-detail"></small></div><div><span id="backup-count" class="metric">0 backups</span></div></section>
+<section class="toolbar"><input id="search" type="search" placeholder="Buscar por nome, namespace ou caminho..." /><select id="status-filter"><option value="all">Todos os status</option><option value="online">Online</option><option value="stopped">Parados</option><option value="errored">Com erro</option></select><select id="namespace-filter"><option value="all">Todos os namespaces</option></select></section>
+<section class="card"><div class="table-wrap"><table><thead><tr><th>Projeto</th><th>Status</th><th>CPU</th><th>RAM</th><th>Restarts</th><th>Uptime</th><th></th></tr></thead><tbody id="process-list"></tbody></table></div><div id="empty-state" class="empty hidden">Nenhum processo encontrado.</div></section>
+<div id="modal" class="modal hidden"><div class="modal-card"><div class="modal-header"><div><h2 id="modal-title">Logs</h2><p id="modal-subtitle"></p></div><button id="modal-close" class="icon-btn">×</button></div><div class="tabs"><button class="tab active" data-tab="out">Output</button><button class="tab" data-tab="error">Error</button></div><pre id="log-content">Carregando...</pre></div></div>
+</main></div><div id="toast" class="toast hidden"></div><script src="/common.js"></script><script src="/app.js"></script></body></html>
