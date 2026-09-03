@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="robots" content="noindex,nofollow" />
   <title>PM2 Manager</title>
   <link rel="stylesheet" href="/style.css" />
 </head>
@@ -22,9 +23,17 @@
         <a class="nav-item" href="#backups">Backups</a>
       </nav>
 
-      <div class="sidebar-footer">
-        <span class="dot"></span>
-        <span id="server-status">Conectando...</span>
+      <div class="sidebar-bottom">
+        <div class="session-card">
+          <span class="session-label">Conectado como</span>
+          <strong id="current-user">Carregando...</strong>
+          <button id="logout-btn" class="session-logout" type="button">Sair</button>
+        </div>
+
+        <div class="sidebar-footer">
+          <span class="dot"></span>
+          <span id="server-status">Conectando...</span>
+        </div>
       </div>
     </aside>
 
