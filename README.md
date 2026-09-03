@@ -1,90 +1,281 @@
 # PM2 Manager
 
-Painel web para administrar muitos processos PM2 sem depender de uma lista extensa no terminal.
+Painel web para administrar muitos processos PM2 com autenticação, backup do `dump.pm2`, controle de acesso e auditoria de uso.
 
 ## Recursos
 
-- Autenticação por usuário e senha
-- Senha armazenada com `scrypt`, nunca em texto puro
+- Múltiplos usuários
+- Perfis `admin`, `operator` e `viewer`
+- Senhas protegidas com `scrypt`
 - Sessão assinada com expiração
 - Cookie `HttpOnly` + `SameSite=Strict`
 - Proteção CSRF nas ações administrativas
 - Bloqueio temporário após tentativas repetidas de login
-- Headers de segurança e proteção contra iframe
+- Auditoria por usuário, IP, data, ação e resultado
 - Lista de processos PM2
 - Busca por nome, namespace e caminho
-- Filtro por status e namespace
 - CPU, RAM, restarts e uptime
-- Start, Stop, Restart e Delete
+- Start, Stop e Restart
+- Delete restrito a administradores
 - Logs stdout e stderr
-- Proteção do próprio processo `pm2-manager`
-- Indicador de alterações ainda não salvas
 - `PM2 Save` pelo painel
 - Backup automático do `dump.pm2` antes de cada save
 - Backup automático antes de excluir um processo
-- Backup manual
-- Histórico de backups
-- Download dos dumps
-- Preparação segura de restauração
-- Retenção automática dos 30 backups mais recentes
+- Histórico, download e preparação de restore
+- Proteção do próprio processo `pm2-manager`
 
-## Autenticação
+## Perfis de acesso
 
-As credenciais não ficam no Git e não são colocadas nas variáveis do processo PM2.
+### Viewer
 
-Por padrão, o arquivo de autenticação fica em:
+Pode consultar:
+
+- processos;
+- status;
+- CPU/RAM;
+- logs;
+- lista de backups.
+
+Não pode executar comandos nem baixar dumps.
+
+### Operator
+
+Possui tudo do Viewer e também pode:
+
+- Start;
+- Stop;
+- Restart;
+- PM2 Save;
+- criar backup manual.
+
+Não pode executar Delete, baixar dumps, restaurar backup, gerenciar usuários ou acessar a auditoria administrativa.
+
+### Admin
+
+Possui acesso completo, incluindo:
+
+- Delete;
+- download de `dump.pm2`;
+- preparação de restore;
+- criação e edição de usuários;
+- auditoria.
+
+O sistema sempre exige pelo menos um administrador ativo.
+
+## Onde ficam as credenciais
+
+As credenciais não ficam no Git nem nas variáveis de ambiente salvas pelo PM2.
+
+Por padrão:
 
 ```text
 ~/.pm2/pm2-manager-auth.json
 ```
 
-Esse arquivo contém o nome de usuário, o hash `scrypt` da senha e uma chave aleatória usada para assinar as sessões. A senha original não é armazenada.
+O arquivo contém:
 
-Para criar ou trocar as credenciais, execute com o mesmo usuário Linux que roda o PM2:
+- chave aleatória de sessão;
+- lista de usuários;
+- perfil de cada usuário;
+- hash `scrypt` da senha;
+- versão de sessão para invalidação de acessos antigos.
 
-```bash
-npm run auth:setup
-```
+No Linux, o arquivo deve possuir permissão `600`.
 
-O assistente pedirá:
-
-```text
-Usuário [admin]:
-Senha:
-Confirme a senha:
-```
-
-A senha precisa ter pelo menos 12 caracteres.
-
-No Linux, o arquivo é salvo com permissão `600`. O PM2 Manager se recusa a iniciar caso o arquivo esteja ausente ou esteja acessível por outros usuários.
-
-Depois de criar ou alterar a senha:
-
-```bash
-pm2 restart pm2-manager
-```
-
-Trocar as credenciais gera uma nova chave de sessão, então sessões antigas deixam de ser válidas automaticamente.
-
-## Instalação inicial
+## Configuração inicial
 
 ```bash
 cd /caminho/pm2-manager
 npm install
 npm run auth:setup
+npm run check
 pm2 start ecosystem.config.js
 pm2 save
 ```
 
-Por padrão o painel escuta apenas localmente em:
+O assistente `auth:setup` cria ou atualiza um administrador.
+
+A senha deve possuir pelo menos 12 caracteres.
+
+## Criar usuários pelo painel
+
+Entre com um usuário `admin` e abra:
+
+```text
+Usuários > Novo usuário
+```
+
+Informe:
+
+- usuário;
+- perfil;
+- senha temporária.
+
+Cada pessoa deve possuir seu próprio login. Não compartilhe uma conta administrativa se a intenção é ter auditoria confiável.
+
+## Gerenciamento de usuários pelo terminal
+
+Existe também uma CLI de recuperação, útil caso você perca acesso administrativo ao painel.
+
+Listar usuários:
+
+```bash
+npm run users -- list
+```
+
+Criar usuário:
+
+```bash
+npm run users -- add
+```
+
+Trocar senha:
+
+```bash
+npm run users -- password usuario
+```
+
+Alterar perfil:
+
+```bash
+npm run users -- role usuario operator
+```
+
+Desativar:
+
+```bash
+npm run users -- disable usuario
+```
+
+Ativar:
+
+```bash
+npm run users -- enable usuario
+```
+
+Remover:
+
+```bash
+npm run users -- remove usuario
+```
+
+Após alterações feitas pela CLI, reinicie o processo para recarregar o arquivo:
+
+```bash
+pm2 restart pm2-manager
+```
+
+Alterações feitas pelo próprio painel entram em vigor imediatamente.
+
+## Invalidação de sessões
+
+Cada usuário possui uma versão de sessão.
+
+Ao alterar senha, perfil ou status de um usuário, essa versão é incrementada e sessões antigas deixam de ser aceitas automaticamente.
+
+Isso permite revogar acesso sem alterar a chave de sessão de todos os demais usuários.
+
+## Auditoria
+
+Por padrão, os registros ficam em:
+
+```text
+~/.pm2/pm2-manager-audit.jsonl
+```
+
+Cada evento inclui, quando aplicável:
+
+- data/hora;
+- usuário;
+- perfil;
+- ação;
+- processo ou backup afetado;
+- sucesso/falha;
+- IP;
+- User-Agent.
+
+São registrados eventos como:
+
+```text
+auth.login_success
+auth.login_failed
+auth.login_blocked
+auth.logout
+process.start
+process.stop
+process.restart
+process.delete
+process.logs_viewed
+pm2.save
+backup.create
+backup.download
+backup.restore_prepared
+user.create
+user.update
+user.delete
+```
+
+Senhas, cookies, hashes de senha e tokens CSRF não são gravados na auditoria.
+
+A tela `Auditoria` é visível apenas para administradores.
+
+### Rotação do log
+
+O arquivo ativo é rotacionado quando chega a aproximadamente 10 MB.
+
+Por padrão são mantidos até 5 arquivos.
+
+Pode ser ajustado através de:
+
+```text
+PM2_MANAGER_AUDIT_MAX_BYTES
+PM2_MANAGER_AUDIT_KEEP
+```
+
+## Backups do PM2
+
+O PM2 Manager utiliza:
+
+```text
+~/.pm2/dump.pm2
+~/.pm2/manager-backups/
+```
+
+Antes de cada `PM2 Save`, o dump anterior é copiado para `manager-backups`.
+
+Antes de Delete e antes de preparar um restore também são criados backups de segurança quando existe um dump atual.
+
+## Restaurar um backup
+
+Somente um `admin` pode preparar um restore.
+
+No painel, escolha o backup e confirme digitando:
+
+```text
+RESTAURAR
+```
+
+O painel substitui `~/.pm2/dump.pm2`, mas não mata o daemon automaticamente.
+
+Para aplicar completamente o estado salvo:
+
+```bash
+pm2 kill && pm2 resurrect
+```
+
+Faça essa etapa em uma sessão SSH ativa.
+
+## Servidor
+
+Por padrão o painel escuta apenas em:
 
 ```text
 http://127.0.0.1:4333
 ```
 
-Use Nginx, VPN, Tailscale ou Cloudflare Access para acesso remoto. Para acesso por navegador fora do próprio servidor, prefira HTTPS.
+Para acesso remoto, coloque o painel atrás de Nginx, VPN, Tailscale ou Cloudflare Access e utilize HTTPS.
 
-## Proteções do login
+## Sessão
 
 A sessão padrão dura 8 horas.
 
@@ -94,121 +285,42 @@ Pode ser alterada com:
 PM2_MANAGER_SESSION_HOURS
 ```
 
-O valor aceito fica entre 1 e 24 horas.
+Valores aceitos: 1 a 24 horas.
 
-Após 5 tentativas de login inválidas a partir do mesmo IP, novas tentativas ficam bloqueadas temporariamente por até 15 minutos.
+Após 5 tentativas inválidas a partir do mesmo IP, novas tentativas ficam temporariamente bloqueadas por até 15 minutos.
 
-Quando o painel é servido por HTTPS através de um proxy reverso, o cookie de sessão recebe também a flag `Secure`.
-
-## Inicialização automática do PM2
-
-Execute:
+## Startup do PM2
 
 ```bash
 pm2 startup
 ```
 
-O PM2 mostrará um comando com `sudo`. Execute exatamente o comando informado e depois:
+Execute o comando `sudo` retornado pelo PM2 e finalize com:
 
 ```bash
 pm2 save
 ```
 
-## Onde ficam os backups
+## Atualização
 
-O PM2 Manager usa o mesmo `PM2_HOME` do usuário que executa o processo.
-
-Por padrão:
-
-```text
-~/.pm2/dump.pm2
-~/.pm2/manager-backups/
-```
-
-Os backups são mantidos fora do repositório para não serem perdidos durante um `git pull` ou novo deploy.
-
-A retenção padrão é de 30 dumps. Pode ser alterada em `ecosystem.config.js` através de:
-
-```text
-PM2_MANAGER_BACKUP_KEEP
-```
-
-## Como funciona o PM2 Save
-
-Ao clicar em `PM2 Save`:
-
-1. Se já existir `~/.pm2/dump.pm2`, ele é copiado para `~/.pm2/manager-backups/`.
-2. Depois o painel executa o equivalente ao `pm2 save` através da API do PM2.
-3. O novo `dump.pm2` passa a representar o estado atual dos processos.
-
-Assim, um save incorreto não elimina imediatamente o estado anterior.
-
-## Exclusão protegida
-
-Antes de executar `Delete` em qualquer processo, o gerenciador cria automaticamente um backup do dump atual.
-
-O próprio processo `pm2-manager` não pode receber Start, Stop, Restart ou Delete pelo painel. Isso evita que o gerenciador derrube a si próprio.
-
-## Recuperação após reboot
-
-Com o `pm2 startup` configurado, o PM2 usa o estado salvo na inicialização.
-
-Para recuperar manualmente o `dump.pm2` atual:
-
-```bash
-pm2 resurrect
-```
-
-## Restaurar um backup antigo
-
-No painel, clique em `Preparar restore` no backup desejado e confirme digitando:
-
-```text
-RESTAURAR
-```
-
-O painel:
-
-1. cria um backup emergencial do dump atual;
-2. copia o backup escolhido para `~/.pm2/dump.pm2`;
-3. não reinicia o daemon automaticamente.
-
-Para aplicar completamente a restauração, mantenha uma sessão SSH aberta e execute:
-
-```bash
-pm2 kill && pm2 resurrect
-```
-
-Essa etapa é propositalmente manual porque `pm2 kill` derruba também o próprio PM2 Manager. Depois do `resurrect`, o gerenciador voltará automaticamente se estiver presente no dump restaurado.
-
-## Atualizar o gerenciador
-
-Como a autenticação é obrigatória, configure-a antes do primeiro restart após atualizar uma instalação antiga:
+Antes de reiniciar, valide a sintaxe:
 
 ```bash
 git pull
 npm install
+npm run check
+pm2 restart pm2-manager
+```
+
+Se for a primeira atualização a partir de uma versão sem autenticação:
+
+```bash
 npm run auth:setup
-pm2 restart pm2-manager
 ```
 
-Nas próximas atualizações, se o arquivo `~/.pm2/pm2-manager-auth.json` já existir, não é necessário executar `auth:setup` novamente:
+## Importante
 
-```bash
-git pull
-npm install
-pm2 restart pm2-manager
-```
-
-Se a alteração mudar a lista de processos que deve sobreviver a um reboot, finalize com:
-
-```bash
-pm2 save
-```
-
-## Observação importante
-
-O painel deve rodar com o mesmo usuário Linux que possui os processos PM2 que você deseja administrar.
+O PM2 Manager deve rodar com o mesmo usuário Linux que possui os processos PM2 administrados.
 
 Confira com:
 
