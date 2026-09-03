@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="robots" content="noindex,nofollow" />
+  <title>Login · PM2 Manager</title>
+  <link rel="stylesheet" href="/style.css" />
+</head>
+<body class="auth-page">
+  <main class="auth-shell">
+    <section class="auth-card" aria-labelledby="login-title">
+      <div class="auth-brand">
+        <div class="brand-icon">P2</div>
+        <div>
+          <strong>PM2 Manager</strong>
+          <span>Server Console</span>
+        </div>
+      </div>
+
+      <div class="auth-copy">
+        <span class="eyebrow">Acesso protegido</span>
+        <h1 id="login-title">Entrar no servidor</h1>
+        <p>Use suas credenciais para visualizar processos, logs, backups e executar ações no PM2.</p>
+      </div>
+
+      <form id="login-form" class="auth-form" autocomplete="on">
+        <label>
+          <span>Usuário</span>
+          <input id="username" name="username" type="text" autocomplete="username" required autofocus />
+        </label>
+
+        <label>
+          <span>Senha</span>
+          <input id="password" name="password" type="password" autocomplete="current-password" required />
+        </label>
+
+        <div id="login-error" class="auth-error hidden" role="alert"></div>
+
+        <button id="login-btn" class="btn primary auth-submit" type="submit">Entrar</button>
+      </form>
+
+      <div class="auth-security">
+        <span class="security-dot"></span>
+        <span>Sessão protegida por cookie HttpOnly e validação CSRF.</span>
+      </div>
+    </section>
+  </main>
+
+  <script src="/login.js"></script>
+</body>
+</html>
