@@ -3,6 +3,8 @@ let backups = [];
 let saveState = null;
 let currentLogs = { out: '', error: '' };
 let currentLogTab = 'out';
+let authState = { user: null, csrfToken: null, expiresAt: null };
+let refreshTimer = null;
 
 const el = (id) => document.getElementById(id);
 
@@ -55,10 +57,27 @@ function showToast(message) {
   showToast.timer = setTimeout(() => toast.classList.add('hidden'), 3000);
 }
 
+function redirectToLogin() {
+  const next = `${window.location.pathname}${window.location.search}${window.location.hash}`;
+  window.location.replace(`/login?next=${encodeURIComponent(next)}`);
+}
+
 async function api(url, options = {}) {
+  const method = String(options.method || 'GET').toUpperCase();
+  const headers = {
+    'Content-Type': 'application/json',
+    ...(options.headers || {}),
+  };
+
+  if (!['GET', 'HEAD', 'OPTIONS'].includes(method) && authState.csrfToken) {
+    headers['X-CSRF-Token'] = authState.csrfToken;
+  }
+
   const response = await fetch(url, {
-    headers: { 'Content-Type': 'application/json' },
+    credentials: 'same-origin',
+    cache: 'no-store',
     ...options,
+    headers,
   });
 
   const contentType = response.headers.get('content-type') || '';
@@ -66,8 +85,35 @@ async function api(url, options = {}) {
     ? await response.json().catch(() => ({}))
     : {};
 
+  if (response.status === 401) {
+    redirectToLogin();
+    throw new Error('Sessão expirada.');
+  }
+
   if (!response.ok) throw new Error(data.error || 'Erro na requisição');
   return data;
+}
+
+async function loadAuthState() {
+  const response = await fetch('/api/auth/status', {
+    credentials: 'same-origin',
+    cache: 'no-store',
+  });
+  const data = await response.json().catch(() => ({}));
+
+  if (!data.authenticated) {
+    redirectToLogin();
+    return false;
+  }
+
+  authState = {
+    user: data.user,
+    csrfToken: data.csrfToken,
+    expiresAt: data.expiresAt,
+  };
+
+  el('current-user').textContent = data.user || 'Usuário';
+  return true;
 }
 
 async function loadAll(silent = false) {
@@ -313,6 +359,33 @@ function renderLogs() {
   el('log-content').textContent = currentLogs[currentLogTab] || 'Sem logs.';
 }
 
+async function logout() {
+  const button = el('logout-btn');
+  button.disabled = true;
+
+  try {
+    await fetch('/api/auth/logout', {
+      method: 'POST',
+      credentials: 'same-origin',
+      headers: authState.csrfToken ? { 'X-CSRF-Token': authState.csrfToken } : {},
+    });
+  } finally {
+    window.location.replace('/login');
+  }
+}
+
+async function initialize() {
+  try {
+    const authenticated = await loadAuthState();
+    if (!authenticated) return;
+
+    await loadAll(true);
+    refreshTimer = setInterval(() => loadAll(true), 5000);
+  } catch (_) {
+    redirectToLogin();
+  }
+}
+
 window.runAction = runAction;
 window.openLogs = openLogs;
 window.downloadBackup = downloadBackup;
@@ -322,6 +395,7 @@ el('refresh-btn').addEventListener('click', () => loadAll());
 el('save-btn').addEventListener('click', savePM2);
 el('save-alert-btn').addEventListener('click', savePM2);
 el('backup-btn').addEventListener('click', createBackup);
+el('logout-btn').addEventListener('click', logout);
 el('search').addEventListener('input', render);
 el('status-filter').addEventListener('change', render);
 el('namespace-filter').addEventListener('change', render);
@@ -344,5 +418,8 @@ document.querySelectorAll('.tab').forEach((tab) => {
   });
 });
 
-loadAll(true);
-setInterval(() => loadAll(true), 5000);
+window.addEventListener('beforeunload', () => {
+  if (refreshTimer) clearInterval(refreshTimer);
+});
+
+initialize();
