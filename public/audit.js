@@ -1,0 +1,7 @@
+let audit = [];
+const { el, api, escapeHtml, formatDate, showToast, loadSession, bindShell } = PM2UI;
+function renderAudit() { el('audit-empty').classList.toggle('hidden', audit.length > 0); el('audit-list').innerHTML = audit.map((item) => `<tr><td>${formatDate(item.at)}</td><td>${escapeHtml(item.user || 'anônimo')}<div class="project-meta">${escapeHtml(item.role || '')}</div></td><td><span class="audit-event">${escapeHtml(item.event || '-')}</span></td><td>${escapeHtml(item.target || '-')}</td><td><span class="status-pill ${item.success ? 'active' : 'inactive'}">${item.success ? 'OK' : 'Falha'}</span></td><td><div>${escapeHtml(item.ip || '-')}</div><div class="audit-detail">${escapeHtml(item.detail || '')}</div></td></tr>`).join(''); }
+async function loadAudit(silent = false) { try { audit = await api(`/api/audit?limit=${encodeURIComponent(el('audit-limit').value)}`); renderAudit(); el('server-status').textContent = 'PM2 conectado'; document.querySelector('.dot').style.background = 'var(--green)'; if (!silent) showToast('Auditoria atualizada'); } catch (error) { if (!silent) showToast(error.message, 'error'); } }
+el('refresh-btn').addEventListener('click', () => loadAudit());
+el('audit-limit').addEventListener('change', () => loadAudit(true));
+(async () => { bindShell(); if (!await loadSession('audit')) return; await loadAudit(true); })();
