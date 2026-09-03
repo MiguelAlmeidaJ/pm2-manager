@@ -10,7 +10,9 @@ module.exports = {
       env: {
         NODE_ENV: 'production',
         PORT: 4333,
-        HOST: '127.0.0.1'
+        HOST: '127.0.0.1',
+        PM2_MANAGER_PROCESS_NAME: 'pm2-manager',
+        PM2_MANAGER_BACKUP_KEEP: 30
       }
     }
   ]
