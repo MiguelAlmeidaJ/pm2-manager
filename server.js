@@ -4,7 +4,7 @@ const fs = require('fs');
 const path = require('path');
 
 const app = express();
-const PORT = process.env.PORT || 3333;
+const PORT = process.env.PORT || 4333;
 const HOST = process.env.HOST || '127.0.0.1';
 
 app.use(express.json());
