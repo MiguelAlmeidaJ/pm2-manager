@@ -18,7 +18,8 @@
       </div>
 
       <nav>
-        <button class="nav-item active">Processos</button>
+        <a class="nav-item active" href="#processes">Processos</a>
+        <a class="nav-item" href="#backups">Backups</a>
       </nav>
 
       <div class="sidebar-footer">
@@ -28,13 +29,24 @@
     </aside>
 
     <main>
-      <header class="topbar">
+      <header class="topbar" id="processes">
         <div>
           <h1>Processos</h1>
-          <p>Gerencie seus projetos PM2 sem depender da lista do terminal.</p>
+          <p>Gerencie seus projetos PM2 e mantenha o estado do servidor protegido.</p>
         </div>
-        <button id="refresh-btn" class="btn ghost">Atualizar</button>
+        <div class="header-actions">
+          <button id="refresh-btn" class="btn ghost">Atualizar</button>
+          <button id="save-btn" class="btn primary">PM2 Save</button>
+        </div>
       </header>
+
+      <section id="save-alert" class="save-alert hidden">
+        <div>
+          <strong>Existem alterações ainda não salvas.</strong>
+          <span>O estado atual dos processos é diferente do último PM2 Save.</span>
+        </div>
+        <button id="save-alert-btn" class="btn primary">Salvar agora</button>
+      </section>
 
       <section class="stats">
         <article>
@@ -53,6 +65,17 @@
           <span>Memória total</span>
           <strong id="stat-memory">0 MB</strong>
         </article>
+      </section>
+
+      <section class="save-status card compact-card">
+        <div>
+          <span class="eyebrow">Estado salvo</span>
+          <strong id="last-save">Nenhum PM2 Save detectado</strong>
+          <small id="save-detail">Aguardando informações...</small>
+        </div>
+        <div class="save-status-right">
+          <span id="backup-count" class="metric">0 backups</span>
+        </div>
       </section>
 
       <section class="toolbar">
@@ -91,6 +114,38 @@
         </div>
         <div id="empty-state" class="empty hidden">Nenhum processo encontrado.</div>
       </section>
+
+      <section id="backups" class="section-heading">
+        <div>
+          <span class="eyebrow">Segurança</span>
+          <h2>Backups do PM2</h2>
+          <p>Antes de cada PM2 Save, o dump anterior é preservado automaticamente.</p>
+        </div>
+        <button id="backup-btn" class="btn ghost">Criar backup agora</button>
+      </section>
+
+      <section class="card backup-card">
+        <div class="backup-note">
+          <strong>Restauração protegida</strong>
+          <span>O painel apenas prepara o dump selecionado. A troca completa do daemon é feita conscientemente pelo terminal, evitando derrubar o próprio gerenciador por acidente.</span>
+        </div>
+
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Backup</th>
+                <th>Data</th>
+                <th>Processos</th>
+                <th>Tamanho</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="backup-list"></tbody>
+          </table>
+        </div>
+        <div id="backup-empty" class="empty hidden">Nenhum backup criado ainda.</div>
+      </section>
     </main>
   </div>
 
@@ -110,6 +165,23 @@
       </div>
 
       <pre id="log-content">Carregando...</pre>
+    </div>
+  </div>
+
+  <div id="restore-modal" class="modal hidden">
+    <div class="confirm-card">
+      <div class="modal-header">
+        <div>
+          <h2>Backup preparado</h2>
+          <p>O dump.pm2 foi substituído com segurança.</p>
+        </div>
+        <button id="restore-close" class="icon-btn">×</button>
+      </div>
+      <div class="confirm-body">
+        <p>Para aplicar completamente esse estado no servidor, execute:</p>
+        <code id="restore-command">pm2 kill && pm2 resurrect</code>
+        <p class="warning-text">Esse comando reinicia o daemon PM2 e os processos salvos. Faça isso em uma sessão SSH ativa.</p>
+      </div>
     </div>
   </div>
 
