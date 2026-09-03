@@ -3,6 +3,7 @@ const pm2 = require('pm2');
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
+const crypto = require('crypto');
 
 const app = express();
 const PORT = Number(process.env.PORT || 4333);
@@ -12,11 +13,32 @@ const PM2_HOME = process.env.PM2_HOME || path.join(os.homedir(), '.pm2');
 const DUMP_PATH = path.join(PM2_HOME, 'dump.pm2');
 const BACKUP_DIR = process.env.PM2_MANAGER_BACKUP_DIR || path.join(PM2_HOME, 'manager-backups');
 const BACKUP_KEEP = Math.max(5, Number(process.env.PM2_MANAGER_BACKUP_KEEP || 30));
+const AUTH_FILE = process.env.PM2_MANAGER_AUTH_FILE || path.join(PM2_HOME, 'pm2-manager-auth.json');
+const SESSION_COOKIE = 'pm2_manager_session';
+const SESSION_HOURS = Math.min(24, Math.max(1, Number(process.env.PM2_MANAGER_SESSION_HOURS || 8)));
+const SESSION_TTL_MS = SESSION_HOURS * 60 * 60 * 1000;
+const LOGIN_WINDOW_MS = 15 * 60 * 1000;
+const LOGIN_MAX_FAILURES = 5;
 
 let dirtySince = null;
+let authConfig = null;
+const loginFailures = new Map();
 
+app.set('trust proxy', 'loopback');
+app.disable('x-powered-by');
 app.use(express.json({ limit: '32kb' }));
-app.use(express.static(path.join(__dirname, 'public')));
+
+app.use((req, res, next) => {
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'DENY');
+  res.setHeader('Referrer-Policy', 'no-referrer');
+  res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
+  res.setHeader(
+    'Content-Security-Policy',
+    "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'"
+  );
+  next();
+});
 
 function connectPM2() {
   return new Promise((resolve, reject) => {
@@ -211,6 +233,287 @@ function getSaveState() {
   };
 }
 
+function loadAuthConfig() {
+  if (!fs.existsSync(AUTH_FILE)) {
+    throw new Error(
+      `Autenticação não configurada. Execute "npm run auth:setup" com o mesmo usuário do PM2. Arquivo esperado: ${AUTH_FILE}`
+    );
+  }
+
+  if (process.platform !== 'win32') {
+    const mode = fs.statSync(AUTH_FILE).mode & 0o777;
+    if ((mode & 0o077) !== 0) {
+      throw new Error(`Permissões inseguras em ${AUTH_FILE}. Use: chmod 600 "${AUTH_FILE}"`);
+    }
+  }
+
+  const parsed = JSON.parse(fs.readFileSync(AUTH_FILE, 'utf8'));
+
+  if (!parsed.username || typeof parsed.username !== 'string') {
+    throw new Error('Configuração de autenticação inválida: username ausente.');
+  }
+
+  if (!parsed.passwordHash || !/^scrypt\$[a-f0-9]{32}\$[a-f0-9]{128}$/i.test(parsed.passwordHash)) {
+    throw new Error('Configuração de autenticação inválida: passwordHash inválido.');
+  }
+
+  if (!parsed.sessionSecret || !/^[a-f0-9]{128}$/i.test(parsed.sessionSecret)) {
+    throw new Error('Configuração de autenticação inválida: sessionSecret inválido.');
+  }
+
+  return parsed;
+}
+
+function safeEqualString(a, b) {
+  const left = crypto.createHash('sha256').update(String(a)).digest();
+  const right = crypto.createHash('sha256').update(String(b)).digest();
+  return crypto.timingSafeEqual(left, right);
+}
+
+function verifyPassword(password, storedHash) {
+  return new Promise((resolve, reject) => {
+    const [, saltHex, expectedHex] = storedHash.split('$');
+    const salt = Buffer.from(saltHex, 'hex');
+    const expected = Buffer.from(expectedHex, 'hex');
+
+    crypto.scrypt(String(password || ''), salt, expected.length, (err, derived) => {
+      if (err) return reject(err);
+      resolve(crypto.timingSafeEqual(derived, expected));
+    });
+  });
+}
+
+function parseCookies(req) {
+  const result = {};
+  const header = req.headers.cookie || '';
+
+  for (const part of header.split(';')) {
+    const index = part.indexOf('=');
+    if (index < 0) continue;
+
+    const key = part.slice(0, index).trim();
+    const value = part.slice(index + 1).trim();
+    if (!key) continue;
+
+    try {
+      result[key] = decodeURIComponent(value);
+    } catch (_) {
+      result[key] = value;
+    }
+  }
+
+  return result;
+}
+
+function signSession(username) {
+  const payload = {
+    u: username,
+    iat: Date.now(),
+    exp: Date.now() + SESSION_TTL_MS,
+    csrf: crypto.randomBytes(24).toString('base64url'),
+  };
+
+  const encoded = Buffer.from(JSON.stringify(payload), 'utf8').toString('base64url');
+  const signature = crypto
+    .createHmac('sha256', Buffer.from(authConfig.sessionSecret, 'hex'))
+    .update(encoded)
+    .digest('base64url');
+
+  return { token: `${encoded}.${signature}`, payload };
+}
+
+function verifySessionToken(token) {
+  if (!token || typeof token !== 'string') return null;
+
+  const [encoded, signature, extra] = token.split('.');
+  if (!encoded || !signature || extra) return null;
+
+  const expected = crypto
+    .createHmac('sha256', Buffer.from(authConfig.sessionSecret, 'hex'))
+    .update(encoded)
+    .digest('base64url');
+
+  if (!safeEqualString(signature, expected)) return null;
+
+  try {
+    const payload = JSON.parse(Buffer.from(encoded, 'base64url').toString('utf8'));
+    if (!payload || payload.u !== authConfig.username) return null;
+    if (!Number.isFinite(payload.exp) || payload.exp <= Date.now()) return null;
+    if (!payload.csrf || typeof payload.csrf !== 'string') return null;
+    return payload;
+  } catch (_) {
+    return null;
+  }
+}
+
+function getSession(req) {
+  return verifySessionToken(parseCookies(req)[SESSION_COOKIE]);
+}
+
+function isSecureRequest(req) {
+  return Boolean(req.secure || String(req.headers['x-forwarded-proto'] || '').split(',')[0].trim() === 'https');
+}
+
+function setSessionCookie(req, res, token) {
+  const parts = [
+    `${SESSION_COOKIE}=${encodeURIComponent(token)}`,
+    'Path=/',
+    'HttpOnly',
+    'SameSite=Strict',
+    `Max-Age=${Math.floor(SESSION_TTL_MS / 1000)}`,
+  ];
+
+  if (isSecureRequest(req)) parts.push('Secure');
+  res.setHeader('Set-Cookie', parts.join('; '));
+}
+
+function clearSessionCookie(req, res) {
+  const parts = [
+    `${SESSION_COOKIE}=`,
+    'Path=/',
+    'HttpOnly',
+    'SameSite=Strict',
+    'Max-Age=0',
+  ];
+
+  if (isSecureRequest(req)) parts.push('Secure');
+  res.setHeader('Set-Cookie', parts.join('; '));
+}
+
+function requirePageAuth(req, res, next) {
+  const session = getSession(req);
+  if (!session) return res.redirect(302, `/login?next=${encodeURIComponent(req.originalUrl)}`);
+  req.auth = session;
+  res.setHeader('Cache-Control', 'no-store');
+  next();
+}
+
+function requireApiAuth(req, res, next) {
+  const session = getSession(req);
+  if (!session) return res.status(401).json({ error: 'Sessão expirada ou não autenticada.' });
+  req.auth = session;
+  res.setHeader('Cache-Control', 'no-store');
+  next();
+}
+
+function requireCsrfForUnsafe(req, res, next) {
+  if (['GET', 'HEAD', 'OPTIONS'].includes(req.method)) return next();
+
+  const token = req.get('x-csrf-token') || '';
+  if (!safeEqualString(token, req.auth.csrf)) {
+    return res.status(403).json({ error: 'Token de segurança inválido. Atualize a página e tente novamente.' });
+  }
+
+  next();
+}
+
+function getClientKey(req) {
+  return String(req.ip || req.socket.remoteAddress || 'unknown');
+}
+
+function getLoginBlock(req) {
+  const key = getClientKey(req);
+  const current = loginFailures.get(key);
+  if (!current) return null;
+
+  if (Date.now() - current.firstFailure >= LOGIN_WINDOW_MS) {
+    loginFailures.delete(key);
+    return null;
+  }
+
+  if (current.count < LOGIN_MAX_FAILURES) return null;
+  return { retryAfterMs: LOGIN_WINDOW_MS - (Date.now() - current.firstFailure) };
+}
+
+function registerLoginFailure(req) {
+  const key = getClientKey(req);
+  const current = loginFailures.get(key);
+
+  if (!current || Date.now() - current.firstFailure >= LOGIN_WINDOW_MS) {
+    loginFailures.set(key, { count: 1, firstFailure: Date.now() });
+    return;
+  }
+
+  current.count += 1;
+}
+
+function clearLoginFailures(req) {
+  loginFailures.delete(getClientKey(req));
+}
+
+app.get('/api/health', (req, res) => {
+  res.json({ ok: true, service: 'pm2-manager' });
+});
+
+app.get('/api/auth/status', (req, res) => {
+  const session = getSession(req);
+  res.setHeader('Cache-Control', 'no-store');
+
+  res.json({
+    authenticated: Boolean(session),
+    user: session?.u || null,
+    csrfToken: session?.csrf || null,
+    expiresAt: session?.exp || null,
+  });
+});
+
+app.post('/api/auth/login', async (req, res) => {
+  const block = getLoginBlock(req);
+
+  if (block) {
+    const retryAfter = Math.max(1, Math.ceil(block.retryAfterMs / 1000));
+    res.setHeader('Retry-After', String(retryAfter));
+    return res.status(429).json({
+      error: `Muitas tentativas de login. Tente novamente em ${Math.ceil(retryAfter / 60)} minuto(s).`,
+    });
+  }
+
+  try {
+    const username = String(req.body?.username || '').trim();
+    const password = String(req.body?.password || '');
+    const [userMatches, passwordMatches] = await Promise.all([
+      Promise.resolve(safeEqualString(username, authConfig.username)),
+      verifyPassword(password, authConfig.passwordHash),
+    ]);
+
+    if (!userMatches || !passwordMatches) {
+      registerLoginFailure(req);
+      return res.status(401).json({ error: 'Usuário ou senha inválidos.' });
+    }
+
+    clearLoginFailures(req);
+    const session = signSession(authConfig.username);
+    setSessionCookie(req, res, session.token);
+
+    return res.json({
+      ok: true,
+      user: authConfig.username,
+      csrfToken: session.payload.csrf,
+      expiresAt: session.payload.exp,
+    });
+  } catch (_) {
+    return res.status(500).json({ error: 'Não foi possível concluir o login.' });
+  }
+});
+
+app.post('/api/auth/logout', (req, res) => {
+  clearSessionCookie(req, res);
+  res.json({ ok: true });
+});
+
+app.get('/login', (req, res) => {
+  if (getSession(req)) return res.redirect(302, '/');
+  res.setHeader('Cache-Control', 'no-store');
+  res.sendFile(path.join(__dirname, 'public', 'login.html'));
+});
+
+app.get(['/', '/index.html'], requirePageAuth, (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
+
+app.use(express.static(path.join(__dirname, 'public'), { index: false }));
+app.use('/api', requireApiAuth, requireCsrfForUnsafe);
+
 app.get('/api/processes', async (req, res) => {
   try {
     const list = await listPM2();
@@ -242,9 +545,7 @@ app.post('/api/processes/:id/:action', async (req, res) => {
   const allowed = new Set(['start', 'stop', 'restart', 'delete']);
   const { id, action } = req.params;
 
-  if (!allowed.has(action)) {
-    return res.status(400).json({ error: 'Ação inválida' });
-  }
+  if (!allowed.has(action)) return res.status(400).json({ error: 'Ação inválida' });
 
   try {
     const result = await describePM2(id);
@@ -258,13 +559,10 @@ app.post('/api/processes/:id/:action', async (req, res) => {
     }
 
     let safetyBackup = null;
-    if (action === 'delete') {
-      safetyBackup = backupCurrentDump('before-delete');
-    }
+    if (action === 'delete') safetyBackup = backupCurrentDump('before-delete');
 
     await pm2Action(action, id);
     dirtySince = dirtySince || Date.now();
-
     res.json({ ok: true, action, id, safetyBackup });
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -279,7 +577,6 @@ app.get('/api/processes/:id/logs', async (req, res) => {
     if (!result?.length) return res.status(404).json({ error: 'Processo não encontrado' });
 
     const env = result[0].pm2_env || {};
-
     res.json({
       out: readLastLines(env.pm_out_log_path, lines),
       error: readLastLines(env.pm_err_log_path, lines),
@@ -304,12 +601,7 @@ app.post('/api/pm2/save', async (req, res) => {
     const backup = backupCurrentDump('before-save');
     await pm2Dump();
     dirtySince = null;
-
-    res.json({
-      ok: true,
-      backup,
-      state: getSaveState(),
-    });
+    res.json({ ok: true, backup, state: getSaveState() });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -371,21 +663,23 @@ app.post('/api/backups/:filename/prepare-restore', (req, res) => {
   }
 });
 
-app.get('/api/health', (req, res) => {
-  res.json({ ok: true, service: 'pm2-manager', selfName: SELF_NAME });
-});
-
-connectPM2()
+Promise.resolve()
+  .then(() => {
+    authConfig = loadAuthConfig();
+    console.log(`Autenticação: ${AUTH_FILE}`);
+    return connectPM2();
+  })
   .then(() => {
     ensureBackupDir();
     app.listen(PORT, HOST, () => {
       console.log(`PM2 Manager: http://${HOST}:${PORT}`);
       console.log(`PM2 Home: ${PM2_HOME}`);
       console.log(`Backups: ${BACKUP_DIR}`);
+      console.log(`Sessão: ${SESSION_HOURS}h`);
     });
   })
   .catch((error) => {
-    console.error('Não foi possível conectar ao PM2:', error);
+    console.error('Falha ao iniciar o PM2 Manager:', error.message);
     process.exit(1);
   });
 
