@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PM2 Manager</title>
+  <link rel="stylesheet" href="/style.css" />
+</head>
+<body>
+  <div class="layout">
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="brand-icon">P2</div>
+        <div>
+          <strong>PM2 Manager</strong>
+          <span>Server Console</span>
+        </div>
+      </div>
+
+      <nav>
+        <button class="nav-item active">Processos</button>
+      </nav>
+
+      <div class="sidebar-footer">
+        <span class="dot"></span>
+        <span id="server-status">Conectando...</span>
+      </div>
+    </aside>
+
+    <main>
+      <header class="topbar">
+        <div>
+          <h1>Processos</h1>
+          <p>Gerencie seus projetos PM2 sem depender da lista do terminal.</p>
+        </div>
+        <button id="refresh-btn" class="btn ghost">Atualizar</button>
+      </header>
+
+      <section class="stats">
+        <article>
+          <span>Total</span>
+          <strong id="stat-total">0</strong>
+        </article>
+        <article>
+          <span>Online</span>
+          <strong id="stat-online">0</strong>
+        </article>
+        <article>
+          <span>Parados</span>
+          <strong id="stat-stopped">0</strong>
+        </article>
+        <article>
+          <span>Memória total</span>
+          <strong id="stat-memory">0 MB</strong>
+        </article>
+      </section>
+
+      <section class="toolbar">
+        <div class="search-box">
+          <input id="search" type="search" placeholder="Buscar por nome, namespace ou caminho..." />
+        </div>
+
+        <select id="status-filter">
+          <option value="all">Todos os status</option>
+          <option value="online">Online</option>
+          <option value="stopped">Parados</option>
+          <option value="errored">Com erro</option>
+        </select>
+
+        <select id="namespace-filter">
+          <option value="all">Todos os namespaces</option>
+        </select>
+      </section>
+
+      <section class="card">
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Projeto</th>
+                <th>Status</th>
+                <th>CPU</th>
+                <th>RAM</th>
+                <th>Restarts</th>
+                <th>Uptime</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="process-list"></tbody>
+          </table>
+        </div>
+        <div id="empty-state" class="empty hidden">Nenhum processo encontrado.</div>
+      </section>
+    </main>
+  </div>
+
+  <div id="modal" class="modal hidden">
+    <div class="modal-card">
+      <div class="modal-header">
+        <div>
+          <h2 id="modal-title">Logs</h2>
+          <p id="modal-subtitle"></p>
+        </div>
+        <button id="modal-close" class="icon-btn">×</button>
+      </div>
+
+      <div class="tabs">
+        <button class="tab active" data-tab="out">Output</button>
+        <button class="tab" data-tab="error">Error</button>
+      </div>
+
+      <pre id="log-content">Carregando...</pre>
+    </div>
+  </div>
+
+  <div id="toast" class="toast hidden"></div>
+
+  <script src="/app.js"></script>
+</body>
+</html>

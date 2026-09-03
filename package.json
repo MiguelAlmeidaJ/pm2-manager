@@ -1,0 +1,15 @@
+{
+  "name": "pm2-manager",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Painel web simples para gerenciar processos PM2",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js"
+  },
+  "dependencies": {
+    "express": "^5.1.0",
+    "pm2": "^6.0.8"
+  }
+}
