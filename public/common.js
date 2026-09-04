@@ -62,6 +62,7 @@
     document.querySelectorAll('[data-current-user]').forEach((node) => { node.textContent = data.user || 'Usuário'; });
     document.querySelectorAll('[data-current-role]').forEach((node) => { node.textContent = roleLabel(data.role); });
     document.querySelectorAll('[data-permission]').forEach((node) => node.classList.toggle('hidden', !has(node.dataset.permission)));
+    document.querySelectorAll('[data-admin-only]').forEach((node) => node.classList.toggle('hidden', data.role !== 'admin'));
     if (requiredPermission && !has(requiredPermission)) { window.location.replace('/'); return false; }
     return true;
   }
