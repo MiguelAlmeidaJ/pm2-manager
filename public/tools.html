@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="robots" content="noindex,nofollow" />
+  <title>Ferramentas · PM2 Manager</title>
+  <link rel="stylesheet" href="/style.css" />
+  <link rel="stylesheet" href="/auth.css" />
+  <link rel="stylesheet" href="/pages.css" />
+  <link rel="stylesheet" href="/tools.css" />
+</head>
+<body>
+  <div class="layout">
+    <aside class="sidebar">
+      <div class="brand"><div class="brand-icon">P2</div><div><strong>PM2 Manager</strong><span>Server Console</span></div></div>
+      <nav>
+        <a class="nav-item" href="/">Processos</a>
+        <a class="nav-item" href="/backups.html">Backups</a>
+        <a class="nav-item" href="/users.html" data-permission="users">Usuários</a>
+        <a class="nav-item" href="/audit.html" data-permission="audit">Auditoria</a>
+        <a class="nav-item active" href="/tools.html" data-admin-only>Ferramentas</a>
+      </nav>
+      <div class="sidebar-bottom">
+        <div class="session-card"><span class="session-label">Conectado como</span><strong data-current-user>Carregando...</strong><div class="page-role" data-current-role></div><button class="session-logout" data-logout type="button">Sair</button></div>
+        <div class="sidebar-footer"><span class="dot"></span><span id="server-status">Conectando...</span></div>
+      </div>
+    </aside>
+
+    <main>
+      <div class="mobile-nav">
+        <a href="/">Processos</a><a href="/backups.html">Backups</a><a href="/users.html" data-permission="users">Usuários</a><a href="/audit.html" data-permission="audit">Auditoria</a><a class="active" href="/tools.html" data-admin-only>Ferramentas</a>
+      </div>
+
+      <header class="topbar">
+        <div><h1>Ferramentas do servidor</h1><p class="page-subtitle">Encontre ecosystems esquecidos, monte comandos PM2 e faça inspeções rápidas sem abrir um shell irrestrito.</p></div>
+        <div class="header-actions"><button id="refresh-status-btn" class="btn ghost">Atualizar</button></div>
+      </header>
+
+      <div class="tools-grid">
+        <section class="tools-status">
+          <article><span>Terminal</span><strong id="terminal-mode">Modo seguro</strong></article>
+          <article><span>Limite de busca</span><strong id="scan-limits">Carregando...</strong></article>
+          <article><span>Raízes pesquisadas</span><strong id="root-count">0 diretórios</strong><div id="root-list" class="root-list"></div></article>
+        </section>
+
+        <section class="card tools-card">
+          <div class="tools-heading">
+            <div><span class="eyebrow">Descoberta</span><h2>Encontrador de ecosystem</h2><p>Varre as raízes configuradas e relaciona os arquivos encontrados aos processos PM2 atuais.</p></div>
+            <div class="tools-actions"><button id="scan-btn" class="btn primary">Procurar ecosystems</button></div>
+          </div>
+          <div class="tool-note"><strong>Busca controlada:</strong> node_modules, .git, vendor, logs, builds e links simbólicos são ignorados. A varredura possui profundidade, tempo e quantidade máxima de resultados.</div>
+          <div id="finder-summary" class="finder-summary hidden"></div>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Ecosystem</th><th>Modificado</th><th>Relação com PM2</th><th></th></tr></thead>
+              <tbody id="ecosystem-list"></tbody>
+            </table>
+          </div>
+          <div id="ecosystem-empty" class="empty">Clique em “Procurar ecosystems” para iniciar.</div>
+        </section>
+
+        <section class="card tools-card">
+          <div class="tools-heading"><div><span class="eyebrow">PM2</span><h2>Gerador de comandos</h2><p>Monte comandos operacionais sem executá-los automaticamente.</p></div></div>
+          <div class="command-builder">
+            <label class="form-field"><span>Ação</span><select id="generator-action"><option value="restart-env">Restart + update-env</option><option value="restart">Restart</option><option value="show">Show</option><option value="logs">Logs</option><option value="start-ecosystem">Start ecosystem</option><option value="save">PM2 Save</option></select></label>
+            <label class="form-field"><span>Processo / ecosystem</span><input id="generator-target" placeholder="api, 12 ou /var/www/app/ecosystem.config.js" /></label>
+            <label class="form-field"><span>Ambiente</span><input id="generator-env" placeholder="production" /></label>
+            <button id="generate-btn" class="btn ghost" type="button">Gerar</button>
+          </div>
+          <div class="command-output"><code id="generated-command">pm2 restart &lt;processo&gt; --update-env</code><button id="copy-generated-btn" class="btn ghost" type="button">Copiar</button><button id="send-generated-btn" class="btn ghost" type="button">Enviar ao terminal</button></div>
+        </section>
+
+        <section class="card tools-card">
+          <div class="tools-heading"><div><span class="eyebrow">Diagnóstico</span><h2>Terminal seguro</h2><p>Executa somente comandos de consulta previamente permitidos. Cada execução entra na auditoria.</p></div></div>
+          <div class="tool-note"><strong>Não é um bash aberto:</strong> pipes, redirecionamentos, `&&`, `;`, substituições de shell e comandos destrutivos ficam bloqueados. Para operações, gere o comando e use SSH ou os controles próprios do painel.</div>
+          <div class="terminal-bar">
+            <label class="terminal-field"><span>Diretório de trabalho</span><input id="terminal-cwd" placeholder="/var/www" /></label>
+            <label class="terminal-field"><span>Comando</span><input id="terminal-command" placeholder="pm2 list" autocomplete="off" /></label>
+            <button id="terminal-run-btn" class="btn primary" type="button">Executar</button>
+          </div>
+          <div id="quick-commands" class="quick-commands"></div>
+          <div id="terminal-screen" class="terminal-screen"><span class="meta">Terminal seguro pronto.</span></div>
+        </section>
+      </div>
+    </main>
+  </div>
+
+  <div id="toast" class="toast hidden"></div>
+  <script src="/common.js"></script>
+  <script src="/tools.js"></script>
+</body>
+</html>
