@@ -7,7 +7,7 @@
   "scripts": {
     "start": "node bootstrap.js",
     "dev": "node --watch bootstrap.js",
-    "check": "node --check bootstrap.js && node --check server.js && node --check lib/tools-extension.js && node --check public/common.js && node --check public/app.js && node --check public/backups.js && node --check public/users.js && node --check public/audit.js && node --check public/tools.js && node --check public/login.js && node --check scripts/setup-auth.js && node --check scripts/manage-users.js && node --check scripts/check-bootstrap.js && node scripts/check-bootstrap.js",
+    "check": "node --check bootstrap.js && node --check server.js && node --check lib/auth-migration.js && node --check lib/tools-extension.js && node --check public/common.js && node --check public/app.js && node --check public/backups.js && node --check public/users.js && node --check public/audit.js && node --check public/tools.js && node --check public/login.js && node --check scripts/setup-auth.js && node --check scripts/manage-users.js && node --check scripts/check-bootstrap.js && node --check scripts/check-auth-migration.js && node scripts/check-bootstrap.js && node scripts/check-auth-migration.js",
     "auth:setup": "node scripts/setup-auth.js",
     "users": "node scripts/manage-users.js",
     "pm2:start": "pm2 start ecosystem.config.js",
