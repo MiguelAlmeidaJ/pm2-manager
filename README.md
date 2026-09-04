@@ -1,6 +1,6 @@
 # PM2 Manager
 
-Painel web para administrar muitos processos PM2 com autenticação, backup do `dump.pm2`, controle de acesso e auditoria de uso.
+Painel web para administrar muitos processos PM2 com autenticação, backup do `dump.pm2`, controle de acesso, auditoria e ferramentas de diagnóstico do servidor.
 
 ## Recursos
 
@@ -23,42 +23,36 @@ Painel web para administrar muitos processos PM2 com autenticação, backup do `
 - Backup automático antes de excluir um processo
 - Histórico, download e preparação de restore
 - Proteção do próprio processo `pm2-manager`
+- Encontrador de `ecosystem.config.*`
+- Relação entre ecosystems encontrados e processos PM2 atuais
+- Gerador de comandos PM2, inclusive `--update-env`
+- Terminal seguro e auditado para diagnóstico
+
+## Páginas
+
+```text
+/              Processos
+/backups.html  Backups
+/users.html    Usuários
+/audit.html    Auditoria
+/tools.html    Ferramentas do servidor (admin)
+```
 
 ## Perfis de acesso
 
 ### Viewer
 
-Pode consultar:
-
-- processos;
-- status;
-- CPU/RAM;
-- logs;
-- lista de backups.
-
-Não pode executar comandos nem baixar dumps.
+Pode consultar processos, status, CPU/RAM, logs e lista de backups. Não pode executar comandos nem baixar dumps.
 
 ### Operator
 
-Possui tudo do Viewer e também pode:
+Possui tudo do Viewer e também pode executar Start, Stop, Restart, PM2 Save e criar backup manual.
 
-- Start;
-- Stop;
-- Restart;
-- PM2 Save;
-- criar backup manual.
-
-Não pode executar Delete, baixar dumps, restaurar backup, gerenciar usuários ou acessar a auditoria administrativa.
+Não pode executar Delete, baixar dumps, restaurar backup, gerenciar usuários, acessar auditoria administrativa ou Ferramentas do servidor.
 
 ### Admin
 
-Possui acesso completo, incluindo:
-
-- Delete;
-- download de `dump.pm2`;
-- preparação de restore;
-- criação e edição de usuários;
-- auditoria.
+Possui acesso completo, incluindo Delete, download de `dump.pm2`, preparação de restore, criação/edição de usuários, auditoria e Ferramentas do servidor.
 
 O sistema sempre exige pelo menos um administrador ativo.
 
@@ -72,13 +66,7 @@ Por padrão:
 ~/.pm2/pm2-manager-auth.json
 ```
 
-O arquivo contém:
-
-- chave aleatória de sessão;
-- lista de usuários;
-- perfil de cada usuário;
-- hash `scrypt` da senha;
-- versão de sessão para invalidação de acessos antigos.
+O arquivo contém chave aleatória de sessão, lista de usuários, perfis, hashes `scrypt` e versões de sessão.
 
 No Linux, o arquivo deve possuir permissão `600`.
 
@@ -93,139 +81,54 @@ pm2 start ecosystem.config.js
 pm2 save
 ```
 
-O assistente `auth:setup` cria ou atualiza um administrador.
-
-A senha deve possuir pelo menos 12 caracteres.
-
-## Criar usuários pelo painel
-
-Entre com um usuário `admin` e abra:
-
-```text
-Usuários > Novo usuário
-```
-
-Informe:
-
-- usuário;
-- perfil;
-- senha temporária.
-
-Cada pessoa deve possuir seu próprio login. Não compartilhe uma conta administrativa se a intenção é ter auditoria confiável.
+O assistente `auth:setup` cria ou atualiza um administrador. A senha deve possuir pelo menos 12 caracteres.
 
 ## Gerenciamento de usuários pelo terminal
 
-Existe também uma CLI de recuperação, útil caso você perca acesso administrativo ao painel.
-
-Listar usuários:
-
 ```bash
 npm run users -- list
-```
-
-Criar usuário:
-
-```bash
 npm run users -- add
-```
-
-Trocar senha:
-
-```bash
 npm run users -- password usuario
-```
-
-Alterar perfil:
-
-```bash
 npm run users -- role usuario operator
-```
-
-Desativar:
-
-```bash
 npm run users -- disable usuario
-```
-
-Ativar:
-
-```bash
 npm run users -- enable usuario
-```
-
-Remover:
-
-```bash
 npm run users -- remove usuario
 ```
 
-Após alterações feitas pela CLI, reinicie o processo para recarregar o arquivo:
+Após alterações feitas pela CLI:
 
 ```bash
 pm2 restart pm2-manager
 ```
 
-Alterações feitas pelo próprio painel entram em vigor imediatamente.
+Alterações feitas pelo painel entram em vigor imediatamente.
 
 ## Invalidação de sessões
 
-Cada usuário possui uma versão de sessão.
-
-Ao alterar senha, perfil ou status de um usuário, essa versão é incrementada e sessões antigas deixam de ser aceitas automaticamente.
-
-Isso permite revogar acesso sem alterar a chave de sessão de todos os demais usuários.
+Cada usuário possui uma versão de sessão. Ao alterar senha, perfil ou status, essa versão é incrementada e sessões antigas deixam de ser aceitas automaticamente.
 
 ## Auditoria
 
-Por padrão, os registros ficam em:
+Por padrão:
 
 ```text
 ~/.pm2/pm2-manager-audit.jsonl
 ```
 
-Cada evento inclui, quando aplicável:
+Cada evento inclui, quando aplicável, data/hora, usuário, perfil, ação, alvo, sucesso/falha, IP e User-Agent.
 
-- data/hora;
-- usuário;
-- perfil;
-- ação;
-- processo ou backup afetado;
-- sucesso/falha;
-- IP;
-- User-Agent.
-
-São registrados eventos como:
+Além das ações normais do painel, as ferramentas registram:
 
 ```text
-auth.login_success
-auth.login_failed
-auth.login_blocked
-auth.logout
-process.start
-process.stop
-process.restart
-process.delete
-process.logs_viewed
-pm2.save
-backup.create
-backup.download
-backup.restore_prepared
-user.create
-user.update
-user.delete
+tools.ecosystem_scan
+tools.command
 ```
 
-Senhas, cookies, hashes de senha e tokens CSRF não são gravados na auditoria.
+A saída dos comandos não é gravada na auditoria. Senhas, cookies, hashes e tokens CSRF também não são gravados.
 
-A tela `Auditoria` é visível apenas para administradores.
+O arquivo ativo é rotacionado quando chega a aproximadamente 10 MB e, por padrão, são mantidos até 5 arquivos.
 
-### Rotação do log
-
-O arquivo ativo é rotacionado quando chega a aproximadamente 10 MB.
-
-Por padrão são mantidos até 5 arquivos.
-
-Pode ser ajustado através de:
+Configuração:
 
 ```text
 PM2_MANAGER_AUDIT_MAX_BYTES
@@ -241,23 +144,13 @@ O PM2 Manager utiliza:
 ~/.pm2/manager-backups/
 ```
 
-Antes de cada `PM2 Save`, o dump anterior é copiado para `manager-backups`.
-
-Antes de Delete e antes de preparar um restore também são criados backups de segurança quando existe um dump atual.
+Antes de cada `PM2 Save`, o dump anterior é copiado para `manager-backups`. Antes de Delete e antes de preparar um restore também são criados backups de segurança quando existe um dump atual.
 
 ## Restaurar um backup
 
-Somente um `admin` pode preparar um restore.
+Somente um `admin` pode preparar um restore. O painel substitui `~/.pm2/dump.pm2`, mas não mata o daemon automaticamente.
 
-No painel, escolha o backup e confirme digitando:
-
-```text
-RESTAURAR
-```
-
-O painel substitui `~/.pm2/dump.pm2`, mas não mata o daemon automaticamente.
-
-Para aplicar completamente o estado salvo:
+Para aplicar completamente:
 
 ```bash
 pm2 kill && pm2 resurrect
@@ -265,29 +158,127 @@ pm2 kill && pm2 resurrect
 
 Faça essa etapa em uma sessão SSH ativa.
 
-## Servidor
+## Encontrador de ecosystem
 
-Por padrão o painel escuta apenas em:
+A página `Ferramentas` procura arquivos como:
 
 ```text
-http://127.0.0.1:4333
+ecosystem.config.js
+ecosystem.config.cjs
+ecosystem.config.mjs
+ecosystem.config.json
+ecosystem.production.config.js
+ecosystem.yml
+ecosystem.yaml
 ```
+
+Por padrão a busca considera diretórios existentes entre:
+
+```text
+~
+/var/www
+/srv
+/opt
+```
+
+Para definir raízes diferentes, use uma lista separada por vírgulas:
+
+```text
+PM2_MANAGER_SCAN_ROOTS=/var/www,/home/apps,/dados/sistemas
+```
+
+Outras proteções:
+
+```text
+PM2_MANAGER_SCAN_MAX_DEPTH=7
+PM2_MANAGER_SCAN_MAX_RESULTS=500
+PM2_MANAGER_SCAN_TIMEOUT_MS=15000
+```
+
+A busca ignora diretórios pesados/comuns como `node_modules`, `.git`, `vendor`, logs, builds e links simbólicos.
+
+Na tela, o browser compara o diretório de cada ecosystem aos `cwd`/scripts da lista atual do PM2 e marca arquivos que provavelmente estão relacionados a processos ativos.
+
+## Gerador de comandos e --update-env
+
+A página Ferramentas pode gerar, sem executar automaticamente, comandos como:
+
+```bash
+pm2 restart api --update-env
+pm2 restart api
+pm2 show api
+pm2 logs api --lines 100 --nostream
+pm2 start /var/www/app/ecosystem.config.js --env production
+pm2 save
+```
+
+`--update-env` não significa automaticamente “ler o .env do projeto”. Ele atualiza as variáveis de ambiente utilizadas pelo PM2 no restart conforme a origem/configuração daquele processo. Por isso o gerenciador mantém `Restart` e a geração de `Restart + update-env` como operações distintas.
+
+## Terminal seguro
+
+O terminal da página Ferramentas é propositalmente limitado e disponível somente para `admin`.
+
+Ele usa `execFile` sem shell e bloqueia:
+
+```text
+;
+&&
+|
+>
+<
+`...`
+$(...)
+```
+
+Também não disponibiliza comandos arbitrários como `rm`, `cat`, `curl`, `bash` ou `sh`.
+
+Comandos permitidos incluem consultas como:
+
+```bash
+pwd
+ls -la
+whoami
+hostname
+uptime
+df -h
+node -v
+npm -v
+git status
+git branch --show-current
+git log -n10 --oneline
+pm2 list
+pm2 status
+pm2 show api
+pm2 env 12
+pm2 logs api --nostream
+```
+
+Comandos PM2 operacionais/destrutivos devem ser feitos pelos controles próprios do painel ou por SSH. O gerador de comandos ajuda a montar a linha correta sem transformar a aplicação web em um shell irrestrito.
+
+O diretório de trabalho do terminal também precisa estar dentro das raízes configuradas para o Finder.
+
+Configuração do timeout:
+
+```text
+PM2_MANAGER_TERMINAL_TIMEOUT_MS=8000
+PM2_MANAGER_TERMINAL_MAX_BUFFER=262144
+```
+
+## Servidor
+
+O `ecosystem.config.js` inicia `bootstrap.js`, que carrega a extensão de Ferramentas e depois inicia o servidor principal. Isso mantém o código de diagnóstico separado do núcleo de autenticação/backups.
 
 Para acesso remoto, coloque o painel atrás de Nginx, VPN, Tailscale ou Cloudflare Access e utilize HTTPS.
 
 ## Sessão
 
-A sessão padrão dura 8 horas.
-
-Pode ser alterada com:
+A sessão padrão dura 8 horas e pode ser alterada com:
 
 ```text
 PM2_MANAGER_SESSION_HOURS
 ```
 
-Valores aceitos: 1 a 24 horas.
-
-Após 5 tentativas inválidas a partir do mesmo IP, novas tentativas ficam temporariamente bloqueadas por até 15 minutos.
+Valores aceitos: 1 a 24 horas. Após 5 tentativas inválidas a partir do mesmo IP, novas tentativas ficam temporariamente bloqueadas por até 15 minutos.
 
 ## Startup do PM2
 
@@ -309,14 +300,24 @@ Antes de reiniciar, valide a sintaxe:
 git pull
 npm install
 npm run check
-pm2 restart pm2-manager
+npm run pm2:update
 ```
 
-Se for a primeira atualização a partir de uma versão sem autenticação:
+`npm run pm2:update` usa:
 
 ```bash
-npm run auth:setup
+pm2 restart ecosystem.config.js --update-env
 ```
+
+Se o PM2 Manager ainda estiver registrado apontando diretamente para `server.js` de uma versão antiga, execute uma vez:
+
+```bash
+pm2 delete pm2-manager
+pm2 start ecosystem.config.js
+pm2 save
+```
+
+A partir daí ele passa a iniciar por `bootstrap.js`.
 
 ## Importante
 
