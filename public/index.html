@@ -9,11 +9,12 @@
 <nav><a class="nav-item active" href="/">Processos</a>
 <a class="nav-item" href="/backups.html">Backups</a>
 <a class="nav-item" href="/users.html" data-permission="users">Usuários</a>
-<a class="nav-item" href="/audit.html" data-permission="audit">Auditoria</a></nav>
+<a class="nav-item" href="/audit.html" data-permission="audit">Auditoria</a>
+<a class="nav-item" href="/tools.html" data-admin-only>Ferramentas</a></nav>
 <div class="sidebar-bottom"><div class="session-card"><span class="session-label">Conectado como</span><strong data-current-user>Carregando...</strong><div class="page-role" data-current-role></div><button class="session-logout" data-logout type="button">Sair</button></div>
 <div class="sidebar-footer"><span class="dot"></span><span id="server-status">Conectando...</span></div></div>
 </aside><main><div class="mobile-nav"><a class="active" href="/">Processos</a>
-<a href="/backups.html">Backups</a><a href="/users.html" data-permission="users">Usuários</a><a href="/audit.html" data-permission="audit">Auditoria</a></div>
+<a href="/backups.html">Backups</a><a href="/users.html" data-permission="users">Usuários</a><a href="/audit.html" data-permission="audit">Auditoria</a><a href="/tools.html" data-admin-only>Ferramentas</a></div>
 <header class="topbar"><div><h1>Processos</h1><p class="page-subtitle">Acompanhe e opere seus projetos PM2 sem misturar administração, backups e auditoria.</p></div><div class="header-actions"><button id="refresh-btn" class="btn ghost">Atualizar</button><button id="save-btn" class="btn primary" data-permission="save">PM2 Save</button></div></header>
 <section id="save-alert" class="save-alert hidden"><div><strong>Existem alterações ainda não salvas.</strong><span>O estado atual é diferente do último PM2 Save.</span></div><button id="save-alert-btn" class="btn primary" data-permission="save">Salvar agora</button></section>
 <section class="stats"><article><span>Total</span><strong id="stat-total">0</strong></article><article><span>Online</span><strong id="stat-online">0</strong></article><article><span>Parados</span><strong id="stat-stopped">0</strong></article><article><span>Memória total</span><strong id="stat-memory">0 MB</strong></article></section>
