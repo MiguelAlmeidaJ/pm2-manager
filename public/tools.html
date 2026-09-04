@@ -33,54 +33,84 @@
       </div>
 
       <header class="topbar">
-        <div><h1>Ferramentas do servidor</h1><p class="page-subtitle">Encontre ecosystems esquecidos, monte comandos PM2 e faça inspeções rápidas sem abrir um shell irrestrito.</p></div>
+        <div><h1>Ferramentas do servidor</h1><p class="page-subtitle">Projetos, ecosystems, geração de comandos e terminal em áreas separadas.</p></div>
         <div class="header-actions"><button id="refresh-status-btn" class="btn ghost">Atualizar</button></div>
       </header>
 
-      <div class="tools-grid">
-        <section class="tools-status">
-          <article><span>Terminal</span><strong id="terminal-mode">Modo seguro</strong></article>
-          <article><span>Limite de busca</span><strong id="scan-limits">Carregando...</strong></article>
-          <article><span>Raízes pesquisadas</span><strong id="root-count">0 diretórios</strong><div id="root-list" class="root-list"></div></article>
+      <section class="tools-status">
+        <article><span>Terminal</span><strong id="terminal-mode">Modo seguro</strong></article>
+        <article><span>Limite de busca</span><strong id="scan-limits">Carregando...</strong></article>
+        <article><span>Raízes pesquisadas</span><strong id="root-count">0 diretórios</strong><div id="root-list" class="root-list"></div></article>
+      </section>
+
+      <div class="tool-tabs" role="tablist" aria-label="Ferramentas">
+        <button class="tool-tab active" type="button" data-tab="projects">Projetos</button>
+        <button class="tool-tab" type="button" data-tab="ecosystems">Ecosystems</button>
+        <button class="tool-tab" type="button" data-tab="generator">Gerador</button>
+        <button class="tool-tab" type="button" data-tab="terminal">Terminal</button>
+      </div>
+
+      <div class="tools-panels">
+        <section class="tool-panel active" data-panel="projects">
+          <div class="card tools-card">
+            <div class="tools-heading">
+              <div><span class="eyebrow">Mapa de projetos</span><h2>Projetos PM2</h2><p>Agrupa todos os processos que compartilham o mesmo diretório de projeto.</p></div>
+              <button id="projects-refresh-btn" class="btn ghost" type="button">Atualizar projetos</button>
+            </div>
+            <div class="tool-note"><strong>Agrupamento por caminho:</strong> se API, worker e fila usam o mesmo <code>cwd</code>, aparecem como um único projeto com três processos.</div>
+            <div class="table-wrap">
+              <table>
+                <thead><tr><th>Projeto</th><th>Processos</th><th>Status</th><th>Ecosystem relacionado</th><th></th></tr></thead>
+                <tbody id="project-list"></tbody>
+              </table>
+            </div>
+            <div id="project-empty" class="empty hidden">Nenhum projeto PM2 encontrado.</div>
+          </div>
         </section>
 
-        <section class="card tools-card">
-          <div class="tools-heading">
-            <div><span class="eyebrow">Descoberta</span><h2>Encontrador de ecosystem</h2><p>Varre as raízes configuradas e relaciona os arquivos encontrados aos processos PM2 atuais.</p></div>
-            <div class="tools-actions"><button id="scan-btn" class="btn primary">Procurar ecosystems</button></div>
+        <section class="tool-panel" data-panel="ecosystems">
+          <div class="card tools-card">
+            <div class="tools-heading">
+              <div><span class="eyebrow">Descoberta</span><h2>Encontrador de ecosystem</h2><p>Procura arquivos ecosystem no servidor e associa cada um ao projeto correspondente.</p></div>
+              <div class="tools-actions"><button id="scan-btn" class="btn primary">Procurar ecosystems</button></div>
+            </div>
+            <div class="tool-note"><strong>Busca ampla e controlada:</strong> no Windows, a raiz padrão é o drive do sistema (normalmente <code>C:\</code>). Pastas de sistema, node_modules, .git, vendor, logs e builds são ignorados.</div>
+            <div id="finder-summary" class="finder-summary hidden"></div>
+            <div class="table-wrap">
+              <table>
+                <thead><tr><th>Ecosystem</th><th>Projeto</th><th>Processos relacionados</th><th>Modificado</th><th></th></tr></thead>
+                <tbody id="ecosystem-list"></tbody>
+              </table>
+            </div>
+            <div id="ecosystem-empty" class="empty">Clique em “Procurar ecosystems” para iniciar.</div>
           </div>
-          <div class="tool-note"><strong>Busca controlada:</strong> node_modules, .git, vendor, logs, builds e links simbólicos são ignorados. A varredura possui profundidade, tempo e quantidade máxima de resultados.</div>
-          <div id="finder-summary" class="finder-summary hidden"></div>
-          <div class="table-wrap">
-            <table>
-              <thead><tr><th>Ecosystem</th><th>Modificado</th><th>Relação com PM2</th><th></th></tr></thead>
-              <tbody id="ecosystem-list"></tbody>
-            </table>
-          </div>
-          <div id="ecosystem-empty" class="empty">Clique em “Procurar ecosystems” para iniciar.</div>
         </section>
 
-        <section class="card tools-card">
-          <div class="tools-heading"><div><span class="eyebrow">PM2</span><h2>Gerador de comandos</h2><p>Monte comandos operacionais sem executá-los automaticamente.</p></div></div>
-          <div class="command-builder">
-            <label class="form-field"><span>Ação</span><select id="generator-action"><option value="restart-env">Restart + update-env</option><option value="restart">Restart</option><option value="show">Show</option><option value="logs">Logs</option><option value="start-ecosystem">Start ecosystem</option><option value="save">PM2 Save</option></select></label>
-            <label class="form-field"><span>Processo / ecosystem</span><input id="generator-target" placeholder="api, 12 ou /var/www/app/ecosystem.config.js" /></label>
-            <label class="form-field"><span>Ambiente</span><input id="generator-env" placeholder="production" /></label>
-            <button id="generate-btn" class="btn ghost" type="button">Gerar</button>
+        <section class="tool-panel" data-panel="generator">
+          <div class="card tools-card">
+            <div class="tools-heading"><div><span class="eyebrow">PM2</span><h2>Gerador de comandos</h2><p>Monte comandos operacionais sem executá-los automaticamente.</p></div></div>
+            <div class="command-builder">
+              <label class="form-field"><span>Ação</span><select id="generator-action"><option value="restart-env">Restart + update-env</option><option value="restart">Restart</option><option value="show">Show</option><option value="logs">Logs</option><option value="start-ecosystem">Start ecosystem</option><option value="save">PM2 Save</option></select></label>
+              <label class="form-field"><span>Processo / ecosystem</span><input id="generator-target" placeholder="api, 12 ou C:\Projetos\app\ecosystem.config.js" /></label>
+              <label class="form-field"><span>Ambiente</span><input id="generator-env" placeholder="production" /></label>
+              <button id="generate-btn" class="btn ghost" type="button">Gerar</button>
+            </div>
+            <div class="command-output"><code id="generated-command">pm2 restart &lt;processo&gt; --update-env</code><button id="copy-generated-btn" class="btn ghost" type="button">Copiar</button><button id="send-generated-btn" class="btn ghost" type="button">Enviar ao terminal</button></div>
           </div>
-          <div class="command-output"><code id="generated-command">pm2 restart &lt;processo&gt; --update-env</code><button id="copy-generated-btn" class="btn ghost" type="button">Copiar</button><button id="send-generated-btn" class="btn ghost" type="button">Enviar ao terminal</button></div>
         </section>
 
-        <section class="card tools-card">
-          <div class="tools-heading"><div><span class="eyebrow">Diagnóstico</span><h2>Terminal seguro</h2><p>Executa somente comandos de consulta previamente permitidos. Cada execução entra na auditoria.</p></div></div>
-          <div class="tool-note"><strong>Não é um bash aberto:</strong> pipes, redirecionamentos, `&&`, `;`, substituições de shell e comandos destrutivos ficam bloqueados. Para operações, gere o comando e use SSH ou os controles próprios do painel.</div>
-          <div class="terminal-bar">
-            <label class="terminal-field"><span>Diretório de trabalho</span><input id="terminal-cwd" placeholder="/var/www" /></label>
-            <label class="terminal-field"><span>Comando</span><input id="terminal-command" placeholder="pm2 list" autocomplete="off" /></label>
-            <button id="terminal-run-btn" class="btn primary" type="button">Executar</button>
+        <section class="tool-panel" data-panel="terminal">
+          <div class="card tools-card">
+            <div class="tools-heading"><div><span class="eyebrow">Diagnóstico</span><h2>Terminal seguro</h2><p>Executa somente comandos de consulta permitidos e registra cada execução na auditoria.</p></div></div>
+            <div class="tool-note"><strong>Sem shell irrestrito:</strong> pipes, redirecionamentos, <code>&&</code>, <code>;</code> e comandos destrutivos continuam bloqueados.</div>
+            <div class="terminal-bar">
+              <label class="terminal-field"><span>Diretório de trabalho</span><input id="terminal-cwd" placeholder="C:\Projetos" /></label>
+              <label class="terminal-field"><span>Comando</span><input id="terminal-command" placeholder="pm2 list" autocomplete="off" /></label>
+              <button id="terminal-run-btn" class="btn primary" type="button">Executar</button>
+            </div>
+            <div id="quick-commands" class="quick-commands"></div>
+            <div id="terminal-screen" class="terminal-screen"><span class="meta">Terminal seguro pronto.</span></div>
           </div>
-          <div id="quick-commands" class="quick-commands"></div>
-          <div id="terminal-screen" class="terminal-screen"><span class="meta">Terminal seguro pronto.</span></div>
         </section>
       </div>
     </main>
