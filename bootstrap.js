@@ -35,6 +35,7 @@ function configureWindowsScanRoots() {
 configureWindowsScanRoots();
 
 const { installExpressExtension } = require('./lib/tools-extension-v2');
+const { installOverviewExtension } = require('./lib/overview-extension');
 
 const migration = migrateLegacyAuthFile();
 if (migration.migrated) {
@@ -42,4 +43,5 @@ if (migration.migrated) {
 }
 
 installExpressExtension();
+installOverviewExtension();
 require('./server');
