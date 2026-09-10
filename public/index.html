@@ -1,8 +1,8 @@
 <!DOCTYPE html>
 <html lang="pt-BR"><head>
 <meta charset="UTF-8" /><meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="robots" content="noindex,nofollow" />
-<title>Processos · PM2 Manager</title>
-<link rel="stylesheet" href="/style.css" /><link rel="stylesheet" href="/auth.css" /><link rel="stylesheet" href="/pages.css" />
+<title>Apps Overview · PM2 Manager</title>
+<link rel="stylesheet" href="/style.css" /><link rel="stylesheet" href="/auth.css" /><link rel="stylesheet" href="/pages.css" /><link rel="stylesheet" href="/overview.css" />
 </head><body><div class="layout">
 <aside class="sidebar">
 <div class="brand"><div class="brand-icon">P2</div><div><strong>PM2 Manager</strong><span>Server Console</span></div></div>
@@ -13,13 +13,13 @@
 <a class="nav-item" href="/tools.html" data-admin-only>Ferramentas</a></nav>
 <div class="sidebar-bottom"><div class="session-card"><span class="session-label">Conectado como</span><strong data-current-user>Carregando...</strong><div class="page-role" data-current-role></div><button class="session-logout" data-logout type="button">Sair</button></div>
 <div class="sidebar-footer"><span class="dot"></span><span id="server-status">Conectando...</span></div></div>
-</aside><main><div class="mobile-nav"><a class="active" href="/">Processos</a>
+</aside><main class="overview-main"><div class="mobile-nav"><a class="active" href="/">Processos</a>
 <a href="/backups.html">Backups</a><a href="/users.html" data-permission="users">Usuários</a><a href="/audit.html" data-permission="audit">Auditoria</a><a href="/tools.html" data-admin-only>Ferramentas</a></div>
-<header class="topbar"><div><h1>Processos</h1><p class="page-subtitle">Acompanhe e opere seus projetos PM2 sem misturar administração, backups e auditoria.</p></div><div class="header-actions"><button id="refresh-btn" class="btn ghost">Atualizar</button><button id="save-btn" class="btn primary" data-permission="save">PM2 Save</button></div></header>
+<header class="topbar overview-topbar"><div><span class="overview-eyebrow">Apps Overview</span><h1>Processos PM2</h1><p class="page-subtitle">Visão operacional rápida de disponibilidade, reinícios e consumo dos processos.</p></div><div class="header-actions"><span id="last-update" class="last-update">Atualizando...</span><button id="refresh-btn" class="btn ghost">Atualizar</button><button id="save-btn" class="btn primary" data-permission="save">PM2 Save</button></div></header>
 <section id="save-alert" class="save-alert hidden"><div><strong>Existem alterações ainda não salvas.</strong><span>O estado atual é diferente do último PM2 Save.</span></div><button id="save-alert-btn" class="btn primary" data-permission="save">Salvar agora</button></section>
-<section class="stats"><article><span>Total</span><strong id="stat-total">0</strong></article><article><span>Online</span><strong id="stat-online">0</strong></article><article><span>Parados</span><strong id="stat-stopped">0</strong></article><article><span>Memória total</span><strong id="stat-memory">0 MB</strong></article></section>
-<section class="save-status card compact-card"><div><span class="eyebrow">Estado salvo</span><strong id="last-save">Carregando...</strong><small id="save-detail"></small></div><div><span id="backup-count" class="metric">0 backups</span></div></section>
-<section class="toolbar"><input id="search" type="search" placeholder="Buscar por nome, namespace ou caminho..." /><select id="status-filter"><option value="all">Todos os status</option><option value="online">Online</option><option value="stopped">Parados</option><option value="errored">Com erro</option></select><select id="namespace-filter"><option value="all">Todos os namespaces</option></select></section>
-<section class="card"><div class="table-wrap"><table><thead><tr><th>Projeto</th><th>Status</th><th>CPU</th><th>RAM</th><th>Restarts</th><th>Uptime</th><th></th></tr></thead><tbody id="process-list"></tbody></table></div><div id="empty-state" class="empty hidden">Nenhum processo encontrado.</div></section>
+<section class="stats overview-stats"><article><span>Total</span><strong id="stat-total">0</strong><small>processos</small></article><article><span>Online</span><strong id="stat-online">0</strong><small>em execução</small></article><article><span>Parados</span><strong id="stat-stopped">0</strong><small>fora do ar</small></article><article><span>Memória total</span><strong id="stat-memory">0 MB</strong><small>uso atual</small></article></section>
+<section class="save-status card compact-card overview-save-card"><div><span class="eyebrow">Estado salvo</span><strong id="last-save">Carregando...</strong><small id="save-detail"></small></div><div class="save-card-side"><span id="history-status" class="history-status">Histórico iniciando...</span><span id="backup-count" class="metric">0 backups</span></div></section>
+<section class="toolbar overview-toolbar"><input id="search" type="search" placeholder="Filtrar por nome, namespace ou caminho..." /><select id="status-filter"><option value="all">Todos os status</option><option value="online">Online</option><option value="stopped">Parados</option><option value="errored">Com erro</option></select><select id="namespace-filter"><option value="all">Todos os namespaces</option></select></section>
+<section id="process-list" class="process-overview" aria-live="polite"></section><div id="empty-state" class="empty overview-empty hidden">Nenhum processo encontrado.</div>
 <div id="modal" class="modal hidden"><div class="modal-card"><div class="modal-header"><div><h2 id="modal-title">Logs</h2><p id="modal-subtitle"></p></div><button id="modal-close" class="icon-btn">×</button></div><div class="tabs"><button class="tab active" data-tab="out">Output</button><button class="tab" data-tab="error">Error</button></div><pre id="log-content">Carregando...</pre></div></div>
 </main></div><div id="toast" class="toast hidden"></div><script src="/common.js"></script><script src="/app.js"></script></body></html>
