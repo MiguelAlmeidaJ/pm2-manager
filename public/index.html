@@ -1,25 +1,72 @@
 <!DOCTYPE html>
 <html lang="pt-BR"><head>
 <meta charset="UTF-8" /><meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="robots" content="noindex,nofollow" />
-<title>Apps Overview · PM2 Manager</title>
+<title>Operations Center · PM2 Manager</title>
 <link rel="stylesheet" href="/style.css" /><link rel="stylesheet" href="/auth.css" /><link rel="stylesheet" href="/pages.css" /><link rel="stylesheet" href="/overview.css" />
 </head><body><div class="layout">
 <aside class="sidebar">
-<div class="brand"><div class="brand-icon">P2</div><div><strong>PM2 Manager</strong><span>Server Console</span></div></div>
-<nav><a class="nav-item active" href="/">Processos</a>
+<div class="brand"><div class="brand-icon">P2</div><div><strong>PM2 Manager</strong><span>Operations Center</span></div></div>
+<nav><a class="nav-item active" href="/">Visão geral</a>
 <a class="nav-item" href="/backups.html">Backups</a>
 <a class="nav-item" href="/users.html" data-permission="users">Usuários</a>
 <a class="nav-item" href="/audit.html" data-permission="audit">Auditoria</a>
 <a class="nav-item" href="/tools.html" data-admin-only>Ferramentas</a></nav>
+<div class="sidebar-shortcut"><span>Busca rápida</span><kbd>Ctrl</kbd><b>+</b><kbd>K</kbd></div>
 <div class="sidebar-bottom"><div class="session-card"><span class="session-label">Conectado como</span><strong data-current-user>Carregando...</strong><div class="page-role" data-current-role></div><button class="session-logout" data-logout type="button">Sair</button></div>
 <div class="sidebar-footer"><span class="dot"></span><span id="server-status">Conectando...</span></div></div>
-</aside><main class="overview-main"><div class="mobile-nav"><a class="active" href="/">Processos</a>
+</aside><main class="overview-main"><div class="mobile-nav"><a class="active" href="/">Visão geral</a>
 <a href="/backups.html">Backups</a><a href="/users.html" data-permission="users">Usuários</a><a href="/audit.html" data-permission="audit">Auditoria</a><a href="/tools.html" data-admin-only>Ferramentas</a></div>
-<header class="topbar overview-topbar"><div><span class="overview-eyebrow">Apps Overview</span><h1>Processos PM2</h1><p class="page-subtitle">Visão operacional rápida de disponibilidade, reinícios e consumo dos processos.</p></div><div class="header-actions"><span id="last-update" class="last-update">Atualizando...</span><button id="refresh-btn" class="btn ghost">Atualizar</button><button id="save-btn" class="btn primary" data-permission="save">PM2 Save</button></div></header>
+<header class="topbar overview-topbar"><div><span class="overview-eyebrow">Operations Center</span><h1>Saúde do ambiente</h1><p class="page-subtitle">Processos, servidor, histórico e incidentes em uma única visão operacional.</p></div><div class="header-actions"><span id="live-indicator" class="live-indicator"><i></i>Conectando</span><span id="last-update" class="last-update">Atualizando...</span><button id="refresh-btn" class="btn ghost">Atualizar</button><button id="save-btn" class="btn primary" data-permission="save">PM2 Save</button></div></header>
 <section id="save-alert" class="save-alert hidden"><div><strong>Existem alterações ainda não salvas.</strong><span>O estado atual é diferente do último PM2 Save.</span></div><button id="save-alert-btn" class="btn primary" data-permission="save">Salvar agora</button></section>
-<section class="stats overview-stats"><article><span>Total</span><strong id="stat-total">0</strong><small>processos</small></article><article><span>Online</span><strong id="stat-online">0</strong><small>em execução</small></article><article><span>Parados</span><strong id="stat-stopped">0</strong><small>fora do ar</small></article><article><span>Memória total</span><strong id="stat-memory">0 MB</strong><small>uso atual</small></article></section>
-<section class="save-status card compact-card overview-save-card"><div><span class="eyebrow">Estado salvo</span><strong id="last-save">Carregando...</strong><small id="save-detail"></small></div><div class="save-card-side"><span id="history-status" class="history-status">Histórico iniciando...</span><span id="backup-count" class="metric">0 backups</span></div></section>
-<section class="toolbar overview-toolbar"><input id="search" type="search" placeholder="Filtrar por nome, namespace ou caminho..." /><select id="status-filter"><option value="all">Todos os status</option><option value="online">Online</option><option value="stopped">Parados</option><option value="errored">Com erro</option></select><select id="namespace-filter"><option value="all">Todos os namespaces</option></select></section>
+
+<section class="server-overview card">
+  <div class="server-identity">
+    <div id="server-health-icon" class="server-health-icon healthy"><span></span></div>
+    <div><span class="metric-label">Servidor</span><div class="server-title-row"><strong id="server-name">Carregando...</strong><span id="server-health-label" class="health-chip healthy">Saudável</span></div><p id="server-meta">Aguardando telemetria do servidor...</p></div>
+  </div>
+  <div class="server-metrics">
+    <article><div><span>CPU</span><strong id="server-cpu">0%</strong></div><progress id="server-cpu-progress" max="100" value="0"></progress><small id="server-cpu-detail">—</small></article>
+    <article><div><span>RAM</span><strong id="server-ram">0%</strong></div><progress id="server-ram-progress" max="100" value="0"></progress><small id="server-ram-detail">—</small></article>
+    <article><div><span>Disco</span><strong id="server-disk">—</strong></div><progress id="server-disk-progress" max="100" value="0"></progress><small id="server-disk-detail">—</small></article>
+    <article><div><span>Uptime</span><strong id="server-uptime">—</strong></div><small id="server-runtime-detail">—</small></article>
+  </div>
+</section>
+
+<section class="stats overview-stats"><article><span>Total</span><strong id="stat-total">0</strong><small>processos</small></article><article><span>Online</span><strong id="stat-online">0</strong><small>em execução</small></article><article><span>Atenção</span><strong id="stat-attention">0</strong><small>pedem acompanhamento</small></article><article><span>Críticos</span><strong id="stat-critical">0</strong><small>ação recomendada</small></article><article><span>RAM dos apps</span><strong id="stat-memory">0 MB</strong><small>uso atual</small></article></section>
+
+<section class="ops-grid">
+  <article class="card ops-panel"><div class="panel-heading"><div><span class="overview-eyebrow">Prioridades</span><h2>Atenção agora</h2></div><span id="alert-count" class="metric">0 alertas</span></div><div id="alerts-list" class="alerts-list"><div class="panel-empty">Nenhum alerta operacional.</div></div></article>
+  <article class="card ops-panel"><div class="panel-heading"><div><span class="overview-eyebrow">Histórico</span><h2>Atividade recente</h2></div><span id="history-status" class="history-status">Histórico iniciando...</span></div><div id="activity-list" class="activity-list"><div class="panel-empty">Aguardando eventos.</div></div></article>
+</section>
+
+<section class="save-status card compact-card overview-save-card"><div><span class="eyebrow">Estado salvo</span><strong id="last-save">Carregando...</strong><small id="save-detail"></small></div><div class="save-card-side"><button id="favorite-filter" class="filter-chip" type="button">☆ Favoritos</button><span id="backup-count" class="metric">0 backups</span></div></section>
+<section class="toolbar overview-toolbar"><div class="search-wrap"><span>⌕</span><input id="search" type="search" placeholder="Filtrar por nome, namespace ou caminho..." /></div><select id="health-filter"><option value="all">Todas as condições</option><option value="healthy">Saudáveis</option><option value="attention">Atenção</option><option value="unstable">Instáveis</option><option value="critical">Críticos</option></select><select id="status-filter"><option value="all">Todos os status</option><option value="online">Online</option><option value="stopped">Parados</option><option value="errored">Com erro</option></select><select id="namespace-filter"><option value="all">Todos os namespaces</option></select></section>
+<section class="section-title-row"><div><span class="overview-eyebrow">Aplicações</span><h2>Processos monitorados</h2></div><span id="visible-count" class="metric">0 visíveis</span></section>
 <section id="process-list" class="process-overview" aria-live="polite"></section><div id="empty-state" class="empty overview-empty hidden">Nenhum processo encontrado.</div>
-<div id="modal" class="modal hidden"><div class="modal-card"><div class="modal-header"><div><h2 id="modal-title">Logs</h2><p id="modal-subtitle"></p></div><button id="modal-close" class="icon-btn">×</button></div><div class="tabs"><button class="tab active" data-tab="out">Output</button><button class="tab" data-tab="error">Error</button></div><pre id="log-content">Carregando...</pre></div></div>
+
+<div id="detail-overlay" class="detail-overlay hidden" aria-hidden="true"><aside class="detail-drawer" role="dialog" aria-modal="true" aria-labelledby="detail-title">
+  <header class="detail-header"><div class="detail-heading"><span id="detail-status-mark" class="process-mark unknown"></span><div><div class="detail-title-row"><h2 id="detail-title">Processo</h2><span id="detail-health" class="health-chip healthy">Saudável</span></div><p id="detail-subtitle">—</p></div></div><button id="detail-close" class="icon-btn" type="button" aria-label="Fechar">×</button></header>
+  <div class="detail-tabs"><button class="detail-tab active" data-detail-tab="overview" type="button">Visão geral</button><button class="detail-tab" data-detail-tab="metrics" type="button">Métricas</button><button class="detail-tab" data-detail-tab="logs" type="button">Logs</button></div>
+  <div class="detail-scroll">
+    <section id="detail-panel-overview" class="detail-panel active">
+      <div id="detail-summary" class="detail-summary"></div>
+      <div class="detail-section"><div class="panel-heading"><div><span class="overview-eyebrow">Diagnóstico</span><h3>Health Score</h3></div><strong id="detail-score" class="score-number">—</strong></div><div id="detail-reasons" class="reason-list"></div></div>
+      <div class="detail-section"><div class="panel-heading"><div><span class="overview-eyebrow">Eventos</span><h3>Atividade da aplicação</h3></div></div><div id="detail-events" class="activity-list compact"></div></div>
+      <div class="detail-section"><div class="panel-heading"><div><span class="overview-eyebrow">Runtime</span><h3>Informações técnicas</h3></div></div><div id="detail-runtime" class="runtime-grid"></div></div>
+    </section>
+    <section id="detail-panel-metrics" class="detail-panel">
+      <div class="detail-chart-card"><div class="chart-heading"><div><span>CPU</span><strong id="detail-cpu-current">—</strong></div><small>Histórico coletado</small></div><div id="detail-cpu-chart" class="detail-chart"></div></div>
+      <div class="detail-chart-card"><div class="chart-heading"><div><span>RAM</span><strong id="detail-ram-current">—</strong></div><small>Histórico coletado</small></div><div id="detail-ram-chart" class="detail-chart"></div></div>
+      <div class="detail-chart-card"><div class="chart-heading"><div><span>Disponibilidade</span><strong id="detail-uptime-current">—</strong></div><small>Estados observados</small></div><div id="detail-timeline" class="detail-timeline"></div></div>
+    </section>
+    <section id="detail-panel-logs" class="detail-panel">
+      <div class="log-toolbar"><select id="log-source"><option value="out">Output</option><option value="error">Error</option></select><input id="log-search" type="search" placeholder="Buscar nos logs..." /><button id="log-refresh" class="btn ghost" type="button">Atualizar</button><button id="log-live" class="btn ghost" type="button">Live: off</button><button id="log-copy" class="btn ghost" type="button">Copiar</button></div>
+      <div class="log-meta"><span id="log-path">—</span><span id="log-count">0 linhas</span></div><pre id="detail-log-content">Abra a aba de logs para carregar.</pre>
+    </section>
+  </div>
+  <footer class="detail-footer"><button id="detail-favorite" class="btn ghost" type="button">☆ Favoritar</button><div id="detail-actions" class="actions"></div></footer>
+</aside></div>
+
+<div id="palette" class="palette-overlay hidden" aria-hidden="true"><div class="palette-card" role="dialog" aria-modal="true" aria-label="Busca rápida"><div class="palette-search"><span>⌕</span><input id="palette-search" type="search" placeholder="Busque uma aplicação..." /><kbd>Esc</kbd></div><div id="palette-results" class="palette-results"></div><div class="palette-footer"><span>Enter abre a aplicação</span><span>Ctrl + K para buscar de qualquer lugar</span></div></div></div>
+
 </main></div><div id="toast" class="toast hidden"></div><script src="/common.js"></script><script src="/app.js"></script></body></html>
